@@ -351,10 +351,14 @@
   }
   @keyframes jospin { to { transform: rotate(360deg); } }
 
+  @media (max-width: 2000px) {
+    .jo-bar { height: auto; min-height: 46px; padding: 8px 14px; }
+    .jo-tabs { display: none; }
+    .jo-form-select { display: block; width: auto; flex: 1 1 300px; }
+  }
   @media (max-width: 1100px) {
     .jo-bar { height: auto; min-height: 46px; padding: max(56px, env(safe-area-inset-top)) 10px 8px; gap: 8px; }
-    .jo-tabs { display: none; }
-    .jo-form-select { display: block; }
+    .jo-form-select { width: 100%; flex-basis: 100%; }
     #joLang-B { margin-left: auto; }
   }
 </style>
