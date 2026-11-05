@@ -24386,7 +24386,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       '<button type="button" class="jcam-opt" data-a="cam"><span class="ic">📷</span><span>Ambil dari kamera<small>Bisa diberi timestamp otomatis</small></span></button>' +
       '<button type="button" class="jcam-opt" data-a="file"><span class="ic">🖼</span><span>Pilih berkas<small>Tanpa timestamp</small></span></button>' +
       '<button type="button" class="jcam-x" data-a="x">Batal</button></div>';
-    document.body.appendChild(ov);
+    document.documentElement.appendChild(ov);
     ov.addEventListener('click', function (e) {
       var b = e.target.closest('[data-a]');
       if (!b && e.target !== ov) return;
@@ -24458,7 +24458,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             '<button type="button" class="jcam-sec" data-a="flip" title="Ganti kamera">🔄</button></div>' +
         '</div>' +
       '</div>';
-    document.body.appendChild(ov);
+    document.documentElement.appendChild(ov);
     var video = ov.querySelector('video'), live = ov.querySelector('.jcam-live'),
         cb = ov.querySelector('.jcam-st'), stage = ov.querySelector('.jcam-stage'),
         frame = ov.querySelector('.jcam-frame'), ratioSelect = ov.querySelector('.jcam-ratio'),
@@ -24690,6 +24690,17 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     box-shadow: 0 3px 12px rgba(0,0,0,.3); display: none;
   }
   #joPinchReset.on { display: block; }
+}
+@media (max-width: 640px) {
+  body { padding: 8px !important; }
+  .container { width: 100%; max-width: 100%; padding: 12px !important; }
+  .brand-header { flex-wrap: wrap; gap: 8px; }
+  .brand-header img { max-width: 45%; height: auto; max-height: 40px; }
+  .brand-header h2 { min-width: 0; flex: 1 1 55%; font-size: clamp(15px, 4vw, 20px); }
+  .grid-2, .grid-3, .ba-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .form-group, .form-group input, .form-group select, textarea { min-width: 0; max-width: 100%; }
+  .sheet-block { padding: 10px !important; }
+  .ftbl-scroll { max-width: 100%; }
 }
 </style>
 <script id="joPinch">
