@@ -1,0 +1,26 @@
+{
+  "id": "./",
+  "name": "Jaya Obayashi - QP Form Generator",
+  "short_name": "QP Generator",
+  "description": "Buat form inspeksi QP dan file Excel dari perangkat.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eeeae3",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "./assets/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

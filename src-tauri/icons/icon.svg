@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#132A43"/>
+  <path d="M170 58h132l78 78v278c0 18-14 32-32 32H170c-18 0-32-14-32-32V90c0-18 14-32 32-32Z" fill="#F7FAFC"/>
+  <path d="M302 58v54c0 14 10 24 24 24h54Z" fill="#D9E4EC"/>
+  <text x="256" y="225" fill="#17344F" font-family="Arial, Helvetica, sans-serif" font-size="78" font-weight="700" letter-spacing="-5" text-anchor="middle">QP</text>
+  <path d="M196 263h120" stroke="#B5C5D1" stroke-linecap="round" stroke-width="14"/>
+  <path d="M196 293h86" stroke="#B5C5D1" stroke-linecap="round" stroke-width="14"/>
+  <path d="m187 365 53 51 98-106" fill="none" stroke="#F5A623" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+</svg>
