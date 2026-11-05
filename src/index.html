@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Jaya Obayashi - QP Form Generator</title>
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -319,6 +319,10 @@
   /* ===== PANGGUNG IFRAME ===== */
   .jo-stage { flex: 1; position: relative; min-height: 0; }
   .jo-stage.hidden { display: none; }
+  html.jo-overlay-open .jo-bar { display: none !important; }
+  html.jo-overlay-open .jo-stage {
+    position: fixed; inset: 0; z-index: 10020; min-height: 0;
+  }
   .jo-stage iframe {
     position: absolute; inset: 0; width: 100%; height: 100%;
     border: none; display: none; background: transparent;
@@ -471,7 +475,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Photograph of Inspection List Generator (PT. Jaya Obayashi)</title>
   <!--JOLIB:exceljs-->
   <style>
@@ -5234,7 +5238,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>QC Photo Record Generator (PT. Jaya Obayashi Permanent Logo)</title>
   <!--JOLIB:exceljs-->
   <style>
@@ -10065,7 +10069,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Laporan Kerja Piling (PC Pile) Generator (PT. Jaya Obayashi)</title>
   <!--JOLIB:exceljs-->
   <style>
@@ -14145,7 +14149,7 @@ function annRotateCurrent(delta) {
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Rebar Material Delivery Generator (PT. Jaya Obayashi)</title>
   <!--JOLIB:exceljs-->
   <style>
@@ -18780,7 +18784,7 @@ function annRotateCurrent(delta) {
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>JKT09 — RIC Generator v13</title>
 <!--JOLIB:exceljs-->
 <style>
@@ -21028,7 +21032,7 @@ document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>JKT09 - Gantt Chart Generator v6</title>
 
 <!-- ================= LIBRARIES (CDN) ================= -->
@@ -24277,8 +24281,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script type="text/plain" id="joCamTpl">/* ==== KAMERA + TIMESTAMP (disuntikkan shell ke tiap modul) ====
    Setiap kali form membuka pemilih berkas foto, muncul pilihan kecil:
      📷 Ambil dari kamera   |   🖼 Pilih berkas
-   - Kamera  -> jendela kamera langsung di aplikasi. Bila "Timestamp" aktif,
-                tanggal & jam dicetak permanen di pojok kanan bawah foto.
+   - Kamera  -> jendela kamera langsung di aplikasi, dengan pilihan rasio dan
+                zoom optik/digital. Bila "Timestamp" aktif, tanggal & jam
+                dicetak permanen di pojok kanan bawah foto.
    - Berkas  -> pemilih berkas biasa, foto TIDAK diberi timestamp.
    Drag & drop dan Ctrl+V juga tidak diberi timestamp.
    Hasil kamera dimasukkan lewat jalur unggah yang sama dengan berkas biasa,
@@ -24287,9 +24292,42 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   if (window.__joCam) return;
   window.__joCam = true;
 
-  var KEY = 'joCamStamp';
+  var KEY = 'joCamStamp', RATIO_KEY = 'joCamRatio';
   function stampOn() { try { var v = localStorage.getItem(KEY); return v === null ? true : v === '1'; } catch (e) { return true; } }
   function setStamp(on) { try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {} }
+  function savedRatio() { try { return localStorage.getItem(RATIO_KEY) || 'original'; } catch (e) { return 'original'; } }
+  function setSavedRatio(value) { try { localStorage.setItem(RATIO_KEY, value); } catch (e) {} }
+  function ratioValue(value, width, height) {
+    if (value === 'original' || !value) return width && height ? width / height : 4 / 3;
+    var parts = value.split(':').map(Number);
+    return parts.length === 2 && parts[0] > 0 && parts[1] > 0 ? parts[0] / parts[1] : 4 / 3;
+  }
+  function cropRect(width, height, aspect, zoom) {
+    var cropW = width, cropH = height;
+    if (width / height > aspect) cropW = height * aspect;
+    else cropH = width / aspect;
+    cropW /= zoom;
+    cropH /= zoom;
+    return { x: (width - cropW) / 2, y: (height - cropH) / 2, width: cropW, height: cropH };
+  }
+  function drawCropped(ctx, source, width, height, aspect, zoom) {
+    var crop = cropRect(width, height, aspect, zoom);
+    var outW = Math.max(1, Math.round(crop.width)), outH = Math.max(1, Math.round(crop.height));
+    ctx.canvas.width = outW;
+    ctx.canvas.height = outH;
+    ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, 0, 0, outW, outH);
+  }
+
+  var lastShellOverlayState = null;
+  function syncShellOverlay() {
+    var active = !!document.querySelector('.ann-overlay.active, .jcam-ov');
+    if (active === lastShellOverlayState) return;
+    lastShellOverlayState = active;
+    if (window.parent !== window) window.parent.postMessage({ type: 'jo-overlay', active: active }, '*');
+  }
+  new MutationObserver(syncShellOverlay).observe(document.documentElement, {
+    childList: true, subtree: true, attributes: true, attributeFilter: ['class']
+  });
 
   var asliClick = HTMLInputElement.prototype.click;
   var bypass = false;
@@ -24314,18 +24352,29 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     '.jcam-opt:hover{background:#eff6ff;border-color:#93c5fd}' +
     '.jcam-opt .ic{font-size:22px}.jcam-opt small{display:block;font-weight:400;color:#64748b;font-size:11.5px;margin-top:2px}' +
     '.jcam-x{width:100%;border:none;background:none;color:#64748b;padding:8px;cursor:pointer;font-weight:600;font-size:13px;' + F + '}' +
-    '.jcam-ov{position:fixed;inset:0;z-index:2147483601;background:#000;display:flex;flex-direction:column;font-family:"Segoe UI","Yu Gothic UI",Arial,sans-serif}' +
-    '.jcam-stage{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}' +
-    '.jcam-stage video{max-width:100%;max-height:100%;object-fit:contain}' +
+    '.jcam-ov{position:fixed;inset:0;z-index:2147483601;background:#000;display:flex;flex-direction:column;font-family:"Segoe UI","Yu Gothic UI",Arial,sans-serif;height:100%;height:100dvh;padding-top:env(safe-area-inset-top);box-sizing:border-box}' +
+    '.jcam-stage{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:0;touch-action:none}' +
+    '.jcam-frame{position:relative;overflow:hidden;flex:none;background:#000}' +
+    '.jcam-stage video{display:block;width:100%;height:100%;object-fit:cover;transform-origin:center}' +
     '.jcam-live{position:absolute;right:12px;bottom:12px;background:rgba(0,0,0,.55);color:#ffd400;font:700 15px Consolas,monospace;padding:5px 10px;border-radius:5px;pointer-events:none}' +
-    '.jcam-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:#0f172a;color:#fff;flex-wrap:wrap}' +
+    '.jcam-bar{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:#0f172a;color:#fff;flex-shrink:0}' +
+    '.jcam-options{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}' +
+    '.jcam-ratio-wrap,.jcam-zoom{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700}' +
+    '.jcam-ratio{max-width:150px;border:1px solid #64748b;border-radius:6px;padding:7px 9px;background:#1e293b;color:#fff;font:600 13px "Segoe UI",Arial,sans-serif}' +
+    '.jcam-zoom input[type=range]{width:min(34vw,220px);accent-color:#38bdf8;touch-action:pan-x}' +
+    '.jcam-zoom button{padding:5px 10px!important;min-width:34px}' +
+    '.jcam-zoom-status{min-width:88px;color:#cbd5e1;font-size:11px;font-weight:500}' +
+    '.jcam-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}' +
+    '.jcam-actions>div{display:flex;align-items:center;gap:10px}' +
     '.jcam-bar button,.jcam-err button{border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:14px;' + F + 'cursor:pointer}' +
     '.jcam-shot{width:64px;height:64px;border-radius:50% !important;background:#fff;border:5px solid #94a3b8 !important;padding:0 !important}' +
     '.jcam-shot:active{transform:scale(.94)}' +
     '.jcam-sec{background:#334155;color:#fff}.jcam-pri{background:#16a34a;color:#fff}' +
     '.jcam-tgl{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;cursor:pointer;user-select:none}' +
     '.jcam-tgl input{width:20px;height:20px;accent-color:#16a34a}' +
-    '.jcam-err{color:#fca5a5;padding:24px;text-align:center;font-size:14px;line-height:1.6}';
+    '.jcam-err{color:#fca5a5;padding:24px;text-align:center;font-size:14px;line-height:1.6}' +
+    '@media(max-width:1100px){.jcam-bar{gap:8px;padding-left:10px;padding-right:10px}.jcam-options{gap:8px;justify-content:space-between}.jcam-zoom{gap:5px}.jcam-zoom input[type=range]{width:min(30vw,180px)}.jcam-zoom-status{min-width:68px}.jcam-actions{gap:6px}.jcam-actions>div{gap:6px}.jcam-bar button{padding:9px 11px;font-size:13px}}' +
+    '@media(max-height:520px) and (orientation:landscape){.jcam-options{justify-content:flex-start}.jcam-ratio-wrap,.jcam-zoom{font-size:11px}.jcam-bar{gap:6px;padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}.jcam-shot{width:52px;height:52px}}';
   (document.head || document.documentElement).appendChild(css);
 
   // ---------- pilihan sumber foto ----------
@@ -24389,34 +24438,165 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     var ov = document.createElement('div');
     ov.className = 'jcam-ov';
     ov.innerHTML =
-      '<div class="jcam-stage"><video playsinline muted autoplay></video><div class="jcam-live"></div></div>' +
+      '<div class="jcam-stage"><div class="jcam-frame"><video playsinline muted autoplay></video><div class="jcam-live"></div></div></div>' +
       '<div class="jcam-bar">' +
-        '<button type="button" class="jcam-sec" data-a="x">✕ Batal</button>' +
-        '<button type="button" class="jcam-shot" data-a="shot" aria-label="Ambil foto"></button>' +
-        '<div style="display:flex;gap:12px;align-items:center">' +
-          '<label class="jcam-tgl"><input type="checkbox" class="jcam-st"> Timestamp</label>' +
-          '<button type="button" class="jcam-sec" data-a="flip" title="Ganti kamera">🔄</button>' +
+        '<div class="jcam-options">' +
+          '<label class="jcam-ratio-wrap">Rasio foto <select class="jcam-ratio" aria-label="Rasio foto">' +
+            '<option value="original">Asli perangkat</option><option value="1:1">1:1</option>' +
+            '<option value="4:3">4:3</option><option value="3:2">3:2</option>' +
+            '<option value="16:9">16:9</option><option value="9:16">9:16</option>' +
+          '</select></label>' +
+          '<div class="jcam-zoom"><button type="button" class="jcam-sec" data-a="zoom-out" aria-label="Perkecil zoom">−</button>' +
+            '<input class="jcam-zoom-range" type="range" min="1" max="3" step="0.1" value="1" aria-label="Zoom kamera">' +
+            '<button type="button" class="jcam-sec" data-a="zoom-in" aria-label="Perbesar zoom">+</button>' +
+            '<span class="jcam-zoom-status">1.0× · digital</span></div>' +
+        '</div>' +
+        '<div class="jcam-actions">' +
+          '<button type="button" class="jcam-sec" data-a="x">✕ Batal</button>' +
+          '<button type="button" class="jcam-shot" data-a="shot" aria-label="Ambil foto"></button>' +
+          '<div><label class="jcam-tgl"><input type="checkbox" class="jcam-st"> Timestamp</label>' +
+            '<button type="button" class="jcam-sec" data-a="flip" title="Ganti kamera">🔄</button></div>' +
         '</div>' +
       '</div>';
     document.body.appendChild(ov);
     var video = ov.querySelector('video'), live = ov.querySelector('.jcam-live'),
-        cb = ov.querySelector('.jcam-st'), stage = ov.querySelector('.jcam-stage');
+        cb = ov.querySelector('.jcam-st'), stage = ov.querySelector('.jcam-stage'),
+        frame = ov.querySelector('.jcam-frame'), ratioSelect = ov.querySelector('.jcam-ratio'),
+        zoomRange = ov.querySelector('.jcam-zoom-range'), zoomStatus = ov.querySelector('.jcam-zoom-status');
     cb.checked = stampOn();
+    ratioSelect.value = savedRatio();
     function jam() { live.style.display = cb.checked ? '' : 'none'; live.textContent = teksWaktu(new Date()); }
     jam();
     var tik = setInterval(jam, 1000);
     cb.addEventListener('change', function () { setStamp(cb.checked); jam(); });
 
-    function tutup() { clearInterval(tik); stop(); ov.remove(); document.removeEventListener('keydown', esc); }
+      var zoomTrack = null, nativeZoom = false, digitalZoom = true, zoomFactor = 1, zoomRevision = 0, zoomQueue = Promise.resolve();
+    function zoomBounds() {
+      return nativeZoom ? zoomTrack.getCapabilities().zoom : { min: 1, max: 3, step: 0.1 };
+    }
+    function syncZoomUI() {
+      var bounds = zoomBounds();
+      zoomFactor = Math.max(bounds.min, Math.min(bounds.max, zoomFactor));
+      zoomRange.min = bounds.min;
+      zoomRange.max = bounds.max;
+      zoomRange.step = bounds.step || 0.1;
+      zoomRange.value = zoomFactor;
+      zoomStatus.textContent = zoomFactor.toFixed(1) + '× · ' + (nativeZoom ? 'lensa' : 'digital');
+      video.style.transform = 'scale(' + (digitalZoom ? zoomFactor : 1) + ')';
+    }
+    function setZoom(value) {
+      var bounds = zoomBounds();
+      zoomFactor = Math.max(bounds.min, Math.min(bounds.max, Number(value) || 1));
+      var revision = ++zoomRevision;
+      if (!nativeZoom) {
+        digitalZoom = true;
+        syncZoomUI();
+        return;
+      }
+      syncZoomUI();
+      zoomQueue = zoomQueue.then(function () {
+        if (revision !== zoomRevision || !nativeZoom) return;
+        return Promise.resolve().then(function () {
+          return zoomTrack.applyConstraints({ advanced: [{ zoom: zoomFactor }] });
+        }).then(function () {
+          if (revision === zoomRevision) { digitalZoom = false; syncZoomUI(); }
+        }).catch(function (error) {
+          if (revision !== zoomRevision) return;
+          console.warn('Zoom optik tidak tersedia; menggunakan zoom digital:', error);
+          nativeZoom = false;
+          digitalZoom = true;
+          zoomFactor = Math.max(1, Math.min(3, zoomFactor));
+          syncZoomUI();
+        });
+      });
+    }
+    zoomRange.addEventListener('input', function () { setZoom(zoomRange.value); });
+    ratioSelect.addEventListener('change', function () { setSavedRatio(ratioSelect.value); fitFrame(); });
+    function fitFrame() {
+      var width = video.videoWidth, height = video.videoHeight;
+      var aspect = ratioValue(ratioSelect.value, width, height);
+      if (!width || !height) aspect = ratioValue(ratioSelect.value, 4, 3);
+      var stageW = stage.clientWidth, stageH = stage.clientHeight;
+      if (!stageW || !stageH) return;
+      var frameW = Math.min(stageW, stageH * aspect);
+      var frameH = frameW / aspect;
+      frame.style.width = Math.round(frameW) + 'px';
+      frame.style.height = Math.round(frameH) + 'px';
+    }
+    var pinchStart = null, pointers = new Map();
+    var frameObserver = window.ResizeObserver ? new ResizeObserver(fitFrame) : null;
+    if (frameObserver) frameObserver.observe(stage);
+    stage.addEventListener('pointerdown', function (event) {
+      if (event.pointerType !== 'touch') return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.size === 2) {
+        var points = Array.from(pointers.values());
+        pinchStart = { distance: Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y), zoom: zoomFactor };
+        event.preventDefault();
+      }
+    });
+    stage.addEventListener('pointermove', function (event) {
+      if (!pointers.has(event.pointerId)) return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.size < 2 || !pinchStart) return;
+      var points = Array.from(pointers.values());
+      var distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      if (pinchStart.distance > 0) setZoom(pinchStart.zoom * distance / pinchStart.distance);
+      event.preventDefault();
+    });
+    function endPinch(event) {
+      pointers.delete(event.pointerId);
+      pinchStart = null;
+    }
+    stage.addEventListener('pointerup', endPinch);
+    stage.addEventListener('pointercancel', endPinch);
+    function tutup() {
+      clearInterval(tik);
+      window.removeEventListener('resize', fitFrame);
+      if (window.visualViewport) window.visualViewport.removeEventListener('resize', fitFrame);
+      if (frameObserver) frameObserver.disconnect();
+      stop(); ov.remove(); document.removeEventListener('keydown', esc);
+    }
     function esc(e) { if (e.key === 'Escape') tutup(); }
     document.addEventListener('keydown', esc);
 
     function mulai() {
       stop();
+      nativeZoom = false;
+      digitalZoom = true;
+      zoomFactor = 1;
+      syncZoomUI();
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return gagal();
       navigator.mediaDevices.getUserMedia({
         video: { facingMode: hadap, width: { ideal: 2560 }, height: { ideal: 1440 } }, audio: false
-      }).then(function (s) { stream = s; video.srcObject = s; video.play().catch(function () {}); })
+      }).then(function (s) {
+        stream = s;
+        zoomTrack = s.getVideoTracks()[0] || null;
+        if (zoomTrack && typeof zoomTrack.getCapabilities === 'function') {
+          try {
+            var capabilities = zoomTrack.getCapabilities();
+            nativeZoom = !!(capabilities.zoom && capabilities.zoom.max > capabilities.zoom.min &&
+              typeof zoomTrack.applyConstraints === 'function');
+            if (nativeZoom) {
+              var settings = typeof zoomTrack.getSettings === 'function' ? zoomTrack.getSettings() : {};
+              zoomFactor = settings.zoom || capabilities.zoom.min || 1;
+              digitalZoom = false;
+            }
+          } catch (error) {
+            console.warn('Kemampuan zoom kamera tidak dapat dibaca; menggunakan zoom digital:', error);
+          }
+        }
+        syncZoomUI();
+        video.srcObject = s;
+        video.onloadedmetadata = fitFrame;
+        video.play().catch(function (error) { console.warn('Pratinjau kamera belum bisa diputar:', error); });
+        window.removeEventListener('resize', fitFrame);
+        window.addEventListener('resize', fitFrame, { passive: true });
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', fitFrame);
+          window.visualViewport.addEventListener('resize', fitFrame, { passive: true });
+        }
+      })
         .catch(gagal);
     }
 
@@ -24429,8 +24609,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         var f = tmp.files && tmp.files[0]; if (!f) return;
         var img = new Image(), url = URL.createObjectURL(f), waktu = new Date();
         img.onload = function () {
-          var c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
-          var x = c.getContext('2d'); x.drawImage(img, 0, 0);
+          var c = document.createElement('canvas');
+          var x = c.getContext('2d');
+          drawCropped(x, img, img.naturalWidth, img.naturalHeight, ratioValue(ratioSelect.value, img.naturalWidth, img.naturalHeight), 1);
           if (cb.checked) cetakStamp(x, c.width, c.height, teksWaktu(waktu));
           URL.revokeObjectURL(url);
           c.toBlob(function (b) { tutup(); kirim(input, b, waktu); }, 'image/jpeg', 0.92);
@@ -24458,13 +24639,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (a === 'x') return tutup();
       if (a === 'dev') return kameraPerangkat();
       if (a === 'flip') { hadap = hadap === 'environment' ? 'user' : 'environment'; return mulai(); }
+      if (a === 'zoom-in') return setZoom(zoomFactor + (Number(zoomRange.step) || 0.1));
+      if (a === 'zoom-out') return setZoom(zoomFactor - (Number(zoomRange.step) || 0.1));
       if (a === 'shot') {
         if (!video.videoWidth) return;
         var waktu = new Date();
         var c = document.createElement('canvas');
-        c.width = video.videoWidth; c.height = video.videoHeight;
         var x = c.getContext('2d');
-        x.drawImage(video, 0, 0);
+        drawCropped(x, video, video.videoWidth, video.videoHeight,
+          ratioValue(ratioSelect.value, video.videoWidth, video.videoHeight), digitalZoom ? zoomFactor : 1);
         if (cb.checked) cetakStamp(x, c.width, c.height, teksWaktu(waktu));
         c.toBlob(function (blob) { tutup(); kirim(input, blob, waktu); }, 'image/jpeg', 0.92);
       }
@@ -24562,6 +24745,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   document.addEventListener('touchstart', function (e) {
+    if (document.querySelector('.jcam-ov')) { g = null; return; }
     if (e.touches.length !== 2) return;
     var t = e.touches, c = tengah(t);
     g = { d0: jarak(t), cx: c.x, cy: c.y, mode: null };
@@ -25094,13 +25278,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     '.jo-stamp-resize{position:absolute;right:-8px;bottom:-8px;border:2px solid #fff;border-radius:50%;background:#08751f;box-shadow:0 1px 5px #0008;cursor:nwse-resize;pointer-events:auto;touch-action:none}' +
     '.jo-stamp-live:focus-within{border:1px dashed #08751f}' +
     '@media(max-width:900px){.jo-stamp-controls{flex-wrap:wrap}}' +
-    '@media(max-width:760px){' +
-      '.ann-head{align-items:flex-start;padding:8px 10px;gap:8px}' +
-      '.ann-head>div:last-child{justify-content:flex-end;max-width:100%}' +
+    '@media(max-width:1100px){' +
+      '.ann-head{align-items:flex-start;padding: max(8px,env(safe-area-inset-top)) 10px 8px;gap:8px}' +
+      '.ann-head>div:last-child{justify-content:flex-end;max-width:100%;flex-wrap:wrap}' +
       '.ann-tools{padding:8px;gap:8px;max-height:34vh;max-height:34dvh;overflow-y:auto;align-content:flex-start;overscroll-behavior:contain}' +
       '.ann-tools>.ann-grp{min-width:0}' +
       '.ann-stage{padding:8px}' +
-      '.ann-foot{padding:8px 10px}' +
+      '.ann-foot{padding:8px 10px max(8px,env(safe-area-inset-bottom))}' +
       '.ann-text-toolbar{max-width:calc(100vw - 24px);overflow-x:auto}' +
       '.ann-text-body{max-width:calc(100vw - 24px);max-height:45vh;max-height:45dvh;overflow:auto;overflow-wrap:anywhere}' +
     '}';
@@ -25314,6 +25498,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   var joFrames = {};      // iframe yang SUDAH dibuat (dibuat saat pertama dibuka)
   var joActive = null;    // kode form yang sedang tampil
+
+  window.addEventListener('message', function (event) {
+    var frame = joActive && joFrames[joActive];
+    if (!frame || event.source !== frame.contentWindow || !event.data ||
+        event.data.type !== 'jo-overlay' || typeof event.data.active !== 'boolean') return;
+    document.documentElement.classList.toggle('jo-overlay-open', event.data.active);
+  });
 
   // Ambil isi form dari wadahnya, lalu kembalikan escape-nya.
   function joPayload(code) {
