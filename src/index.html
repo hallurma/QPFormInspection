@@ -24340,7 +24340,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   var lastShellOverlayState = null;
   function syncShellOverlay() {
-    var active = !!document.querySelector('.ann-overlay.active, .jcam-ov');
+    var active = !!document.querySelector('.ann-overlay.active, .jcam-ov, .modal-overlay.active');
     if (active === lastShellOverlayState) return;
     lastShellOverlayState = active;
     if (window.parent !== window) window.parent.postMessage({ type: 'jo-overlay', active: active }, '*');
@@ -25341,6 +25341,17 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       '.ann-tools.jo-ann-tools-expanded{max-height:34vh;max-height:34dvh;overflow-y:auto}' +
     '}' +
     '@media(min-width:1101px){.jo-ann-more-tools{display:none!important}}';
+  style.textContent +=
+    '@media(max-width:640px){' +
+      '.ann-overlay{padding-top:max(52px,env(safe-area-inset-top));box-sizing:border-box}' +
+      '.ann-head{padding-top:10px!important}' +
+      '.modal-overlay{box-sizing:border-box;overflow:auto;padding:max(52px,env(safe-area-inset-top)) 8px max(16px,env(safe-area-inset-bottom))}' +
+      '.modal-box{padding:10px;border-radius:8px}' +
+      '.modal-head{position:sticky;top:0;z-index:2;align-items:flex-start;gap:8px;background:#f1f5f9;padding:6px 0}' +
+      '.modal-head h3{font-size:14px;line-height:1.35}' +
+      '.modal-head h3 span{display:block;margin-top:3px}' +
+      '.pv-page{width:max(100%,760px);margin-left:0;margin-right:0}' +
+    '}';
   document.head.appendChild(style);
 
   window.addEventListener('load', function () {
