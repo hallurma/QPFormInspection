@@ -377,6 +377,18 @@
     .jo-form-select { width: 100%; flex-basis: 100%; }
     #joLang-B { margin-left: auto; }
   }
+  @media (max-width: 2000px) and (pointer: coarse) {
+    .jo-launch {
+      padding-top: max(112px, calc(env(safe-area-inset-top) + 64px));
+    }
+    .jo-bar {
+      padding-top: max(76px, calc(env(safe-area-inset-top) + 32px));
+    }
+    #joLang-L {
+      top: max(76px, calc(env(safe-area-inset-top) + 32px));
+      right: max(24px, calc(env(safe-area-inset-right) + 16px));
+    }
+  }
 </style>
 </head>
 <body>
