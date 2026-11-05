@@ -58,6 +58,12 @@
   .jo-tab.d.active { background: #047857; border-color: #047857; }
   .jo-tab .code { opacity: 0.75; font-weight: 400; }
   .jo-tab.active .code { opacity: 0.9; }
+  .jo-form-select {
+    display: none; width: 100%; min-width: 0; min-height: 42px;
+    background: #1e293b; border: 1px solid #475569; border-radius: 6px;
+    color: #fff; padding: 8px 36px 8px 12px;
+    font: 600 14px 'Segoe UI', Arial, sans-serif;
+  }
 
   /* ===== HALAMAN PILIH FORM ===== */
   /* ===== PILIHAN BAHASA ===== */
@@ -347,11 +353,8 @@
 
   @media (max-width: 1100px) {
     .jo-bar { height: auto; min-height: 46px; padding: max(56px, env(safe-area-inset-top)) 10px 8px; gap: 8px; }
-    .jo-tabs { margin-left: 0; width: 100%; flex-wrap: wrap; }
-    .jo-tab {
-      flex: 1 1 150px; min-width: 0; justify-content: center;
-      padding: 7px 8px; white-space: normal; text-align: center;
-    }
+    .jo-tabs { display: none; }
+    .jo-form-select { display: block; }
     #joLang-B { margin-left: auto; }
   }
 </style>
@@ -366,6 +369,14 @@
   <button class="jo-home" onclick="joHome()">&#9776; Pilih Form</button>
   <button class="jo-help" onclick="joTutOpen()">&#128216; Panduan</button>
   <div class="jo-brand">PT. JAYA OBAYASHI <span>&mdash; QC Form Generator</span></div>
+  <select class="jo-form-select" id="joFormSelect" aria-label="Pilih form" onchange="if(this.value) joOpen(this.value)">
+    <option value="" selected disabled>Pilih form yang akan dibuka...</option>
+    <option value="b">Inspection List — QP-006-02 (b)</option>
+    <option value="c">Photo Record — QP-006-02 (c)</option>
+    <option value="d">Laporan Piling — QP-006-05 (b)</option>
+    <option value="e">Rebar Delivery — QP-006-06 (a)</option>
+    <option value="g">Gantt Schedule</option>
+  </select>
   <div class="jo-tabs">
     <button class="jo-tab b" id="joTab-b" onclick="joOpen('b')">
       <span class="dot"></span> Inspection List <span class="code">QP-006-02 (b)</span>
@@ -25661,6 +25672,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   function joOpen(code) {
     if (!JO_FORMS[code]) return;
+    var formSelect = document.getElementById('joFormSelect');
+    if (formSelect) formSelect.value = code;
 
     document.getElementById('joLaunch').style.display = 'none';
     document.getElementById('joBar').classList.add('show');
@@ -25719,6 +25732,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   function joHome() {
     document.documentElement.classList.remove('jo-overlay-open');
+    var formSelect = document.getElementById('joFormSelect');
+    if (formSelect) formSelect.value = '';
     document.getElementById('joLaunch').style.display = '';
     document.getElementById('joStage').classList.add('hidden');
     document.getElementById('joBar').classList.remove('show');
