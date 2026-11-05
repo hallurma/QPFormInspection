@@ -691,7 +691,8 @@
       width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1;
       border-radius: 3px; font-size: 12px;
     }
-    .inf-split { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .inf-split { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr); min-width: 0; }
+    .ft-info { container-type: inline-size; min-width: 0; }
     .inf-cell { border-right: 1px solid #cbd5e1; }
     .inf-cell:last-child { border-right: none; }
     .inf-cell .inf-lbl { border-right: none; border-bottom: 1px solid #cbd5e1; }
@@ -699,6 +700,11 @@
     .inf-cell input, .inf-cell select {
       width: 100%; padding: 4px 5px; border: 1px solid #cbd5e1;
       border-radius: 3px; font-size: 11px;
+    }
+    @container (max-width: 190px) {
+      .inf-split { grid-template-columns: minmax(0, 1fr); }
+      .inf-cell { border-right: none; }
+      .inf-cell + .inf-cell { border-top: 1px solid #cbd5e1; }
     }
     /* Finding Level diwarnai seperti di Excel */
     select.lvl-low    { background: #c6efce; font-weight: 700; }
