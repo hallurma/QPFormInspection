@@ -337,10 +337,14 @@
   }
   @keyframes jospin { to { transform: rotate(360deg); } }
 
-  @media (max-width: 860px) {
-    .jo-bar { height: auto; padding: 8px 12px; }
-    .jo-tabs { margin-left: 0; width: 100%; }
-    .jo-tab { flex: 1; justify-content: center; }
+  @media (max-width: 1100px) {
+    .jo-bar { height: auto; min-height: 46px; padding: 8px 10px; gap: 8px; }
+    .jo-tabs { margin-left: 0; width: 100%; flex-wrap: wrap; }
+    .jo-tab {
+      flex: 1 1 150px; min-width: 0; justify-content: center;
+      padding: 7px 8px; white-space: normal; text-align: center;
+    }
+    #joLang-B { margin-left: auto; }
   }
 </style>
 </head>
@@ -24485,6 +24489,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   /* iOS memperbesar layar sendiri tiap kali kotak isian berhuruf <16px
      disentuh, lalu tidak kembali. Itu yang membuat layar "lompat". */
   input, select, textarea { font-size: 16px !important; }
+  /* Field caption harus tetap mengikuti skala canvas, bukan ukuran form biasa. */
+  .jo-stamp-live [data-stamp-field] { font-size: var(--jo-stamp-font) !important; }
   /* pinch ditangani sendiri; geser satu jari tetap normal */
   html, body { touch-action: pan-x pan-y; }
   #joPinchHud {
@@ -25087,7 +25093,17 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     '.jo-stamp-drag{position:absolute;left:0;right:0;top:0;cursor:move;pointer-events:auto;touch-action:none}' +
     '.jo-stamp-resize{position:absolute;right:-8px;bottom:-8px;border:2px solid #fff;border-radius:50%;background:#08751f;box-shadow:0 1px 5px #0008;cursor:nwse-resize;pointer-events:auto;touch-action:none}' +
     '.jo-stamp-live:focus-within{border:1px dashed #08751f}' +
-    '@media(max-width:900px){.jo-stamp-controls{flex-wrap:wrap}}';
+    '@media(max-width:900px){.jo-stamp-controls{flex-wrap:wrap}}' +
+    '@media(max-width:760px){' +
+      '.ann-head{align-items:flex-start;padding:8px 10px;gap:8px}' +
+      '.ann-head>div:last-child{justify-content:flex-end;max-width:100%}' +
+      '.ann-tools{padding:8px;gap:8px;max-height:34vh;max-height:34dvh;overflow-y:auto;align-content:flex-start;overscroll-behavior:contain}' +
+      '.ann-tools>.ann-grp{min-width:0}' +
+      '.ann-stage{padding:8px}' +
+      '.ann-foot{padding:8px 10px}' +
+      '.ann-text-toolbar{max-width:calc(100vw - 24px);overflow-x:auto}' +
+      '.ann-text-body{max-width:calc(100vw - 24px);max-height:45vh;max-height:45dvh;overflow:auto;overflow-wrap:anywhere}' +
+    '}';
   document.head.appendChild(style);
 
   window.addEventListener('load', function () {
@@ -25095,6 +25111,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       var api = window.__joStampApi;
       if (!api) throw new Error('Photo annotation API was not initialized.');
       joStampBuildEditor();
+      var canvas = document.getElementById('annCanvas');
+      if (canvas && window.ResizeObserver) {
+        new ResizeObserver(function () { window.joStampPreviewRender(); }).observe(canvas);
+      }
+      window.addEventListener('resize', window.joStampPreviewRender, { passive: true });
       Object.keys(api.storeData).forEach(function (id) {
         ['before', 'after', 'left', 'right', 'p'].forEach(function (side) {
           if (api.storeData[id] && api.storeData[id][side + 'Stamp'] && api.storeData[id][side + 'Orig']) {
