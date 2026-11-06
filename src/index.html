@@ -1077,19 +1077,13 @@
     }
 
     .ann-text-body {
-      min-width: 90px; min-height: 1.4em; max-width: 74vw;
-      /* Default TANPA latar (transparan) -- warna latar sesungguhnya diatur
-         lewat inline style oleh JS (annTextOpen/annTextSetBoxColor), mengikuti
-         pilihan pada tombol "Latar" di toolbar. Border putus-putus di bawah
-         ini cuma penanda batas kotak SELAMA mengetik, tetap tampil terlepas
-         dari latar dipilih atau tidak. */
-      background: transparent; color: #fff;
+      box-sizing: border-box; min-width: 90px; min-height: 1.4em; max-width: 74vw;
+      background: rgba(15,23,42,0.82); color: #fff;
       border: 2px dashed #3b82f6; border-radius: 6px;
       padding: 8px 10px; font: 400 16px 'Segoe UI', Arial, sans-serif; line-height: 1.32;
-      outline: none; cursor: text; overflow-wrap: break-word;
+      outline: none; cursor: text; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
     }
-    /* Placeholder dibuat kontras di kedua kondisi (foto terang MAUPUN gelap)
-       lewat dua text-shadow tipis, karena sekarang defaultnya tanpa latar. */
+    /* Placeholder stays readable while the default colored text box is empty. */
     .ann-text-body:empty::before {
       content: 'Ketik di sini…'; color: rgba(203,213,225,0.95);
       text-shadow: 0 0 3px rgba(255,255,255,0.85), 0 0 4px rgba(0,0,0,0.55);
@@ -1709,9 +1703,9 @@
           </div>
           <span class="ann-tb-sep"></span>
           <div class="ann-hl-wrap">
-            <button id="annTB-boxbg" onmousedown="event.preventDefault(); annTextToggleBoxMenu()" title="Latar kotak teks (opsional) — defaultnya TANPA latar, teks langsung di atas foto">▭</button>
+            <button id="annTB-boxbg" onmousedown="event.preventDefault(); annTextToggleBoxMenu()" title="Warna latar kotak teks">▭</button>
             <div class="ann-hl-menu" id="annBoxBgMenu">
-              <button class="ann-hl-sw ann-hl-none" onmousedown="event.preventDefault(); annTextSetBoxColor(null)" title="Tanpa latar (default)"></button>
+              <button class="ann-hl-sw ann-hl-none" onmousedown="event.preventDefault(); annTextSetBoxColor(null)" title="Tanpa latar"></button>
               <button class="ann-hl-sw" style="background:#1e293b" onmousedown="event.preventDefault(); annTextSetBoxColor('rgba(15,23,42,0.72)')" title="Gelap"></button>
               <button class="ann-hl-sw" style="background:#fff;border-color:#94a3b8" onmousedown="event.preventDefault(); annTextSetBoxColor('#ffffff')" title="Putih"></button>
               <button class="ann-hl-sw" style="background:#fde047" onmousedown="event.preventDefault(); annTextSetBoxColor('#fde047')" title="Kuning"></button>
@@ -1745,6 +1739,7 @@
   <div class="ann-foot">
     <span>
       Seret pada foto untuk menggambar &nbsp;·&nbsp;
+      Double-click / double tap teks untuk edit, tahan teks untuk geser &nbsp;|&nbsp;
       <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> undo &nbsp;·&nbsp;
       <span class="kbd">Ctrl</span>+Scroll zoom &nbsp;·&nbsp;
       <span class="kbd">Esc</span> batal
@@ -3123,6 +3118,7 @@
   let annCur = null;   // { id, side, ann[], redo[], tool, color, width, img, W, H }
   let annDrag = null;  // gambar yang sedang ditarik
   let annMoveDrag = null;  // { index, startX, startY, before } -- anotasi yang sedang digeser (alat Pindah)
+  let annLastTextTap = null;
 
   function annOpen(id, side) {
     const d = storeData[id];
@@ -3506,9 +3502,16 @@
   function annStart(e) {
     if (!annCur) return;
     e.preventDefault();
+    if (e.pointerId != null) document.getElementById('annCanvas').setPointerCapture(e.pointerId);
     if (e.touches && e.touches.length !== 1) {
       annDrag = null;
       annMoveDrag = null;
+      return;
+    }
+    if (e.pointerType === 'touch' && e.isPrimary === false) {
+      annDrag = null;
+      annMoveDrag = null;
+      if (annCur) annCur.cropDrag = null;
       return;
     }
 
@@ -3517,6 +3520,28 @@
     if (annCur.textEditing) annTextCommitIfOpen();
 
     const p = annPos(e);
+
+    if (annCur.tool !== 'crop') {
+      const idx = annFindShapeAt(p.x, p.y);
+      const shape = idx >= 0 ? annCur.ann[idx] : null;
+      if (shape && (shape.t === 'richtext' || shape.t === 'text')) {
+        const now = Date.now();
+        if (annLastTextTap && annLastTextTap.index === idx &&
+            now - annLastTextTap.time <= 450 &&
+            Math.hypot(p.x - annLastTextTap.x, p.y - annLastTextTap.y) <= 0.04) {
+          annLastTextTap = null;
+          annMoveDrag = null;
+          annTextOpen(p);
+          return;
+        }
+        annLastTextTap = { index: idx, time: now, x: p.x, y: p.y };
+        annMoveDrag = {
+          index: idx, startX: p.x, startY: p.y,
+          before: JSON.parse(JSON.stringify(shape)), textGesture: true, moved: false
+        };
+        return;
+      }
+    }
 
     if (annCur.tool === 'text') {
       annTextOpen(p);
@@ -3559,10 +3584,15 @@
       annDraw();
       return;
     }
-    if (annCur && annCur.tool === 'move' && annMoveDrag) {
-      e.preventDefault();
+    if (annCur && annMoveDrag && (annCur.tool === 'move' || annMoveDrag.textGesture)) {
       const p = annPos(e);
-      annApplyShapeOffset(annCur.ann[annMoveDrag.index], annMoveDrag.before, p.x - annMoveDrag.startX, p.y - annMoveDrag.startY);
+      const dx = p.x - annMoveDrag.startX, dy = p.y - annMoveDrag.startY;
+      const cv = document.getElementById('annCanvas');
+      if (annMoveDrag.textGesture && !annMoveDrag.moved &&
+          Math.hypot(dx * cv.clientWidth, dy * cv.clientHeight) < 6) return;
+      annMoveDrag.moved = true;
+      e.preventDefault();
+      annApplyShapeOffset(annCur.ann[annMoveDrag.index], annMoveDrag.before, dx, dy);
       annDraw();
       return;
     }
@@ -3589,7 +3619,7 @@
       annDraw();
       return;
     }
-    if (annCur && annCur.tool === 'move' && annMoveDrag) {
+    if (annCur && annMoveDrag && (annCur.tool === 'move' || annMoveDrag.textGesture)) {
       if (e) e.preventDefault();
       const { index, before } = annMoveDrag;
       const after = JSON.parse(JSON.stringify(annCur.ann[index]));
@@ -3599,6 +3629,7 @@
       if (JSON.stringify(before) !== JSON.stringify(after)) {
         annPushAction({ type: 'editShape', index, before, after });
       }
+      if (annMoveDrag.textGesture && annMoveDrag.moved) annLastTextTap = null;
       annMoveDrag = null;
       annDraw();
       return;
@@ -3750,12 +3781,10 @@
   // Pasang listener kanvas sekali saja saat halaman dimuat
   (function initAnnCanvas() {
     const cv = document.getElementById('annCanvas');
-    cv.addEventListener('mousedown', annStart);
-    cv.addEventListener('mousemove', annMove);
-    window.addEventListener('mouseup', annEnd);
-    cv.addEventListener('touchstart', annStart, { passive: false });
-    cv.addEventListener('touchmove', annMove, { passive: false });
-    cv.addEventListener('touchend', annEnd, { passive: false });
+    cv.addEventListener('pointerdown', annStart);
+    cv.addEventListener('pointermove', annMove);
+    window.addEventListener('pointerup', annEnd);
+    window.addEventListener('pointercancel', annEnd);
 
     // Ctrl/Cmd + scroll untuk zoom -- scroll biasa tetap dipakai untuk
     // menggulir (pan) saat foto sedang diperbesar melebihi layar.
@@ -3960,9 +3989,8 @@
   function annTextHitTest(px, py) {
     for (let i = annCur.ann.length - 1; i >= 0; i--) {
       const a = annCur.ann[i];
-      if (a.t !== 'richtext' || !a._lastBox) continue;
-      const b = a._lastBox;
-      if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) return i;
+      if ((a.t !== 'richtext' && a.t !== 'text') || !a._lastBox) continue;
+      if (annHitTestShape(a, px, py, annCur.W, annCur.H)) return i;
     }
     return -1;
   }
@@ -3982,22 +4010,34 @@
       const shape = annCur.ann[annTextEditIndex];
       leftPx = shape.x1 * cw;
       topPx = shape.y1 * ch;
-      widthPx = Math.max(90, (shape.boxW || 0.22) * cw);
-      body.innerHTML = annBlocksToHTML(shape.blocks, cw);
-      // Data lama (dibuat sebelum ada fitur pilih latar) tidak punya field
-      // boxColor sama sekali -- supaya tampilannya tidak tiba-tiba berubah,
-      // itu dianggap masih memakai latar gelap seperti sedia kala. Kalau
-      // field-nya SUDAH ada (null atau warna), pakai persis nilai itu.
-      annCur.curTextBoxColor = (shape.boxColor === undefined) ? 'rgba(15,23,42,0.72)' : shape.boxColor;
+      if (shape.t === 'text') {
+        const legacyText = document.createElement('span');
+        legacyText.textContent = shape.txt || '';
+        legacyText.style.color = shape.c || annCur.color || '#fff';
+        legacyText.style.fontWeight = '700';
+        legacyText.style.fontSize = Math.max(12, Math.round(cw * 0.032 * (shape.w || 2) / 2)) + 'px';
+        body.replaceChildren(legacyText);
+        widthPx = Math.max(90, (shape._lastBox.w || 0.22) * cw);
+        annCur.curTextBoxColor = 'rgba(15,23,42,0.82)';
+      } else {
+        widthPx = Math.max(90, (shape.boxW || 0.22) * cw);
+        body.innerHTML = annBlocksToHTML(shape.blocks, cw);
+        // Data lama tanpa boxColor tetap memakai latar gelap; null berarti
+        // latar sengaja dihapus.
+        annCur.curTextBoxColor = (shape.boxColor === undefined) ? 'rgba(15,23,42,0.72)' : shape.boxColor;
+      }
     } else {
       leftPx = p.x * cw;
       topPx = p.y * ch;
       widthPx = Math.max(160, cw * 0.22);
       body.innerHTML = '';
-      // Kotak teks BARU: defaultnya TANPA latar (teks langsung di atas foto).
-      annCur.curTextBoxColor = null;
+      // Kotak teks baru memakai latar gelap semi-transparan agar langsung terbaca.
+      annCur.curTextBoxColor = 'rgba(15,23,42,0.82)';
     }
 
+    widthPx = Math.min(cw, Math.max(Math.min(90, cw), widthPx));
+    leftPx = Math.max(0, Math.min(leftPx, cw - widthPx));
+    topPx = Math.max(0, Math.min(topPx, ch - 40));
     editor.style.left = Math.round(leftPx) + 'px';
     editor.style.top = Math.round(topPx) + 'px';
     body.style.width = Math.round(widthPx) + 'px';
@@ -4344,7 +4384,7 @@
     // a.boxColor === undefined -> anotasi LAMA dari sebelum fitur ini ada,
     // tetap dianggap pakai latar gelap seperti sedia kala supaya tampilannya
     // tidak berubah tiba-tiba. a.boxColor === null -> memang sengaja dipilih
-    // TANPA latar (default utk teks baru sekarang). Selain itu -> warna terpilih.
+    // Latar teks baru gelap semi-transparan; null tetap berarti tanpa latar.
     const bgColor = (a.boxColor === undefined) ? 'rgba(15, 23, 42, 0.72)' : a.boxColor;
     const hasBox = !!bgColor;
     // Tanpa kotak latar, tidak perlu jarak tepi selebar itu -- ruang teksnya
@@ -4384,6 +4424,15 @@
           words.forEach(w => {
             ctx.font = annFontString(style);
             const ww = ctx.measureText(w).width;
+            if (ww > maxLineW && w.trim() !== '') {
+              Array.from(w).forEach(char => {
+                const charW = ctx.measureText(char).width;
+                if (curW + charW > maxLineW && curRuns.length > 0) pushLine();
+                curRuns.push({ text: char, style, width: charW });
+                curW += charW;
+              });
+              return;
+            }
             if (curW + ww > maxLineW && curRuns.length > 0 && w.trim() !== '') pushLine();
             curRuns.push({ text: w, style, width: ww });
             curW += ww;
@@ -4399,6 +4448,9 @@
     lines.forEach(l => { boxH += l.lineH; });
     const bx = Math.max(0, Math.min(boxX, W - boxW));
     const by = Math.max(0, Math.min(boxY, H - boxH));
+    ctx.beginPath();
+    ctx.rect(bx, by, boxW, boxH);
+    ctx.clip();
 
     if (hasBox) {
       ctx.fillStyle = bgColor;
@@ -5663,11 +5715,12 @@
     }
 
     .ann-text-body {
-      min-width: 90px; min-height: 1.4em; max-width: 74vw;
-      background: transparent; color: #fff;
+      box-sizing: border-box; min-width: 90px; min-height: 1.4em; max-width: 74vw;
+      color: #fff;
       border: 2px dashed #3b82f6; border-radius: 6px;
       padding: 8px 10px; font: 400 16px 'Segoe UI', Arial, sans-serif; line-height: 1.32;
-      outline: none; cursor: text; overflow-wrap: break-word;
+      outline: none; cursor: text; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+      background: rgba(15,23,42,0.82);
     }
     .ann-text-body:empty::before {
       content: 'Ketik di sini…'; color: rgba(203,213,225,0.95);
@@ -6495,9 +6548,9 @@
           </div>
           <span class="ann-tb-sep"></span>
           <div class="ann-hl-wrap">
-            <button id="annTB-boxbg" onmousedown="event.preventDefault(); annTextToggleBoxMenu()" title="Latar kotak teks (opsional) — defaultnya TANPA latar, teks langsung di atas foto">▭</button>
+            <button id="annTB-boxbg" onmousedown="event.preventDefault(); annTextToggleBoxMenu()" title="Warna latar kotak teks">▭</button>
             <div class="ann-hl-menu" id="annBoxBgMenu">
-              <button class="ann-hl-sw ann-hl-none" onmousedown="event.preventDefault(); annTextSetBoxColor(null)" title="Tanpa latar (default)"></button>
+              <button class="ann-hl-sw ann-hl-none" onmousedown="event.preventDefault(); annTextSetBoxColor(null)" title="Tanpa latar"></button>
               <button class="ann-hl-sw" style="background:#1e293b" onmousedown="event.preventDefault(); annTextSetBoxColor('rgba(15,23,42,0.72)')" title="Gelap"></button>
               <button class="ann-hl-sw" style="background:#fff;border-color:#94a3b8" onmousedown="event.preventDefault(); annTextSetBoxColor('#ffffff')" title="Putih"></button>
               <button class="ann-hl-sw" style="background:#fde047" onmousedown="event.preventDefault(); annTextSetBoxColor('#fde047')" title="Kuning"></button>
@@ -6531,6 +6584,7 @@
   <div class="ann-foot">
     <span>
       Seret pada foto untuk menggambar &nbsp;·&nbsp;
+      Double-click / double tap teks untuk edit, tahan teks untuk geser &nbsp;|&nbsp;
       <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> undo &nbsp;·&nbsp;
       <span class="kbd">Ctrl</span>+Scroll zoom &nbsp;·&nbsp;
       <span class="kbd">Esc</span> batal
@@ -7708,6 +7762,7 @@
   let annCur = null;   // { id, side, ann[], redo[], tool, color, width, img, W, H }
   let annDrag = null;  // gambar yang sedang ditarik
   let annMoveDrag = null;  // { index, startX, startY, before } -- anotasi yang sedang digeser (alat Pindah)
+  let annLastTextTap = null;
 
   function annOpen(id, side) {
     const d = storeData[id];
@@ -8089,9 +8144,16 @@
   function annStart(e) {
     if (!annCur) return;
     e.preventDefault();
+    if (e.pointerId != null) document.getElementById('annCanvas').setPointerCapture(e.pointerId);
     if (e.touches && e.touches.length !== 1) {
       annDrag = null;
       annMoveDrag = null;
+      return;
+    }
+    if (e.pointerType === 'touch' && e.isPrimary === false) {
+      annDrag = null;
+      annMoveDrag = null;
+      if (annCur) annCur.cropDrag = null;
       return;
     }
 
@@ -8100,6 +8162,28 @@
     if (annCur.textEditing) annTextCommitIfOpen();
 
     const p = annPos(e);
+
+    if (annCur.tool !== 'crop') {
+      const idx = annFindShapeAt(p.x, p.y);
+      const shape = idx >= 0 ? annCur.ann[idx] : null;
+      if (shape && (shape.t === 'richtext' || shape.t === 'text')) {
+        const now = Date.now();
+        if (annLastTextTap && annLastTextTap.index === idx &&
+            now - annLastTextTap.time <= 450 &&
+            Math.hypot(p.x - annLastTextTap.x, p.y - annLastTextTap.y) <= 0.04) {
+          annLastTextTap = null;
+          annMoveDrag = null;
+          annTextOpen(p);
+          return;
+        }
+        annLastTextTap = { index: idx, time: now, x: p.x, y: p.y };
+        annMoveDrag = {
+          index: idx, startX: p.x, startY: p.y,
+          before: JSON.parse(JSON.stringify(shape)), textGesture: true, moved: false
+        };
+        return;
+      }
+    }
 
     if (annCur.tool === 'text') {
       annTextOpen(p);
@@ -8142,10 +8226,15 @@
       annDraw();
       return;
     }
-    if (annCur && annCur.tool === 'move' && annMoveDrag) {
-      e.preventDefault();
+    if (annCur && annMoveDrag && (annCur.tool === 'move' || annMoveDrag.textGesture)) {
       const p = annPos(e);
-      annApplyShapeOffset(annCur.ann[annMoveDrag.index], annMoveDrag.before, p.x - annMoveDrag.startX, p.y - annMoveDrag.startY);
+      const dx = p.x - annMoveDrag.startX, dy = p.y - annMoveDrag.startY;
+      const cv = document.getElementById('annCanvas');
+      if (annMoveDrag.textGesture && !annMoveDrag.moved &&
+          Math.hypot(dx * cv.clientWidth, dy * cv.clientHeight) < 6) return;
+      annMoveDrag.moved = true;
+      e.preventDefault();
+      annApplyShapeOffset(annCur.ann[annMoveDrag.index], annMoveDrag.before, dx, dy);
       annDraw();
       return;
     }
@@ -8172,7 +8261,7 @@
       annDraw();
       return;
     }
-    if (annCur && annCur.tool === 'move' && annMoveDrag) {
+    if (annCur && annMoveDrag && (annCur.tool === 'move' || annMoveDrag.textGesture)) {
       if (e) e.preventDefault();
       const { index, before } = annMoveDrag;
       const after = JSON.parse(JSON.stringify(annCur.ann[index]));
@@ -8182,6 +8271,7 @@
       if (JSON.stringify(before) !== JSON.stringify(after)) {
         annPushAction({ type: 'editShape', index, before, after });
       }
+      if (annMoveDrag.textGesture && annMoveDrag.moved) annLastTextTap = null;
       annMoveDrag = null;
       annDraw();
       return;
@@ -8333,12 +8423,10 @@
   // Pasang listener kanvas sekali saja saat halaman dimuat
   (function initAnnCanvas() {
     const cv = document.getElementById('annCanvas');
-    cv.addEventListener('mousedown', annStart);
-    cv.addEventListener('mousemove', annMove);
-    window.addEventListener('mouseup', annEnd);
-    cv.addEventListener('touchstart', annStart, { passive: false });
-    cv.addEventListener('touchmove', annMove, { passive: false });
-    cv.addEventListener('touchend', annEnd, { passive: false });
+    cv.addEventListener('pointerdown', annStart);
+    cv.addEventListener('pointermove', annMove);
+    window.addEventListener('pointerup', annEnd);
+    window.addEventListener('pointercancel', annEnd);
 
     // Ctrl/Cmd + scroll untuk zoom -- scroll biasa tetap dipakai untuk
     // menggulir (pan) saat foto sedang diperbesar melebihi layar.
@@ -8543,9 +8631,8 @@
   function annTextHitTest(px, py) {
     for (let i = annCur.ann.length - 1; i >= 0; i--) {
       const a = annCur.ann[i];
-      if (a.t !== 'richtext' || !a._lastBox) continue;
-      const b = a._lastBox;
-      if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) return i;
+      if ((a.t !== 'richtext' && a.t !== 'text') || !a._lastBox) continue;
+      if (annHitTestShape(a, px, py, annCur.W, annCur.H)) return i;
     }
     return -1;
   }
@@ -8565,22 +8652,34 @@
       const shape = annCur.ann[annTextEditIndex];
       leftPx = shape.x1 * cw;
       topPx = shape.y1 * ch;
-      widthPx = Math.max(90, (shape.boxW || 0.22) * cw);
-      body.innerHTML = annBlocksToHTML(shape.blocks, cw);
-      // Data lama (dibuat sebelum ada fitur pilih latar) tidak punya field
-      // boxColor sama sekali -- supaya tampilannya tidak tiba-tiba berubah,
-      // itu dianggap masih memakai latar gelap seperti sedia kala. Kalau
-      // field-nya SUDAH ada (null atau warna), pakai persis nilai itu.
-      annCur.curTextBoxColor = (shape.boxColor === undefined) ? 'rgba(15,23,42,0.72)' : shape.boxColor;
+      if (shape.t === 'text') {
+        const legacyText = document.createElement('span');
+        legacyText.textContent = shape.txt || '';
+        legacyText.style.color = shape.c || annCur.color || '#fff';
+        legacyText.style.fontWeight = '700';
+        legacyText.style.fontSize = Math.max(12, Math.round(cw * 0.032 * (shape.w || 2) / 2)) + 'px';
+        body.replaceChildren(legacyText);
+        widthPx = Math.max(90, (shape._lastBox.w || 0.22) * cw);
+        annCur.curTextBoxColor = 'rgba(15,23,42,0.82)';
+      } else {
+        widthPx = Math.max(90, (shape.boxW || 0.22) * cw);
+        body.innerHTML = annBlocksToHTML(shape.blocks, cw);
+        // Data lama tanpa boxColor tetap memakai latar gelap; null berarti
+        // latar sengaja dihapus.
+        annCur.curTextBoxColor = (shape.boxColor === undefined) ? 'rgba(15,23,42,0.72)' : shape.boxColor;
+      }
     } else {
       leftPx = p.x * cw;
       topPx = p.y * ch;
       widthPx = Math.max(160, cw * 0.22);
       body.innerHTML = '';
-      // Kotak teks BARU: defaultnya TANPA latar (teks langsung di atas foto).
-      annCur.curTextBoxColor = null;
+      // Kotak teks baru memakai latar gelap semi-transparan agar langsung terbaca.
+      annCur.curTextBoxColor = 'rgba(15,23,42,0.82)';
     }
 
+    widthPx = Math.min(cw, Math.max(Math.min(90, cw), widthPx));
+    leftPx = Math.max(0, Math.min(leftPx, cw - widthPx));
+    topPx = Math.max(0, Math.min(topPx, ch - 40));
     editor.style.left = Math.round(leftPx) + 'px';
     editor.style.top = Math.round(topPx) + 'px';
     body.style.width = Math.round(widthPx) + 'px';
@@ -8927,7 +9026,7 @@
     // a.boxColor === undefined -> anotasi LAMA dari sebelum fitur ini ada,
     // tetap dianggap pakai latar gelap seperti sedia kala supaya tampilannya
     // tidak berubah tiba-tiba. a.boxColor === null -> memang sengaja dipilih
-    // TANPA latar (default utk teks baru sekarang). Selain itu -> warna terpilih.
+    // Latar teks baru gelap semi-transparan; null tetap berarti tanpa latar.
     const bgColor = (a.boxColor === undefined) ? 'rgba(15, 23, 42, 0.72)' : a.boxColor;
     const hasBox = !!bgColor;
     // Tanpa kotak latar, tidak perlu jarak tepi selebar itu -- ruang teksnya
@@ -8967,6 +9066,15 @@
           words.forEach(w => {
             ctx.font = annFontString(style);
             const ww = ctx.measureText(w).width;
+            if (ww > maxLineW && w.trim() !== '') {
+              Array.from(w).forEach(char => {
+                const charW = ctx.measureText(char).width;
+                if (curW + charW > maxLineW && curRuns.length > 0) pushLine();
+                curRuns.push({ text: char, style, width: charW });
+                curW += charW;
+              });
+              return;
+            }
             if (curW + ww > maxLineW && curRuns.length > 0 && w.trim() !== '') pushLine();
             curRuns.push({ text: w, style, width: ww });
             curW += ww;
@@ -8982,6 +9090,9 @@
     lines.forEach(l => { boxH += l.lineH; });
     const bx = Math.max(0, Math.min(boxX, W - boxW));
     const by = Math.max(0, Math.min(boxY, H - boxH));
+    ctx.beginPath();
+    ctx.rect(bx, by, boxW, boxH);
+    ctx.clip();
 
     if (hasBox) {
       ctx.fillStyle = bgColor;
@@ -10428,11 +10539,12 @@
     }
 
     .ann-text-body {
-      min-width: 90px; min-height: 1.4em; max-width: 74vw;
-      background: transparent; color: #fff;
+      box-sizing: border-box; min-width: 90px; min-height: 1.4em; max-width: 74vw;
+      color: #fff;
       border: 2px dashed #3b82f6; border-radius: 6px;
       padding: 8px 10px; font: 400 16px 'Segoe UI', Arial, sans-serif; line-height: 1.32;
-      outline: none; cursor: text; overflow-wrap: break-word;
+      outline: none; cursor: text; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+      background: rgba(15,23,42,0.82);
     }
     .ann-text-body:empty::before {
       content: 'Ketik di sini…'; color: rgba(203,213,225,0.95);
@@ -10854,9 +10966,9 @@
           </div>
           <span class="ann-tb-sep"></span>
           <div class="ann-hl-wrap">
-            <button id="annTB-boxbg" onmousedown="event.preventDefault(); annTextToggleBoxMenu()" title="Latar kotak teks (opsional) — defaultnya TANPA latar, teks langsung di atas foto">▭</button>
+            <button id="annTB-boxbg" onmousedown="event.preventDefault(); annTextToggleBoxMenu()" title="Warna latar kotak teks">▭</button>
             <div class="ann-hl-menu" id="annBoxBgMenu">
-              <button class="ann-hl-sw ann-hl-none" onmousedown="event.preventDefault(); annTextSetBoxColor(null)" title="Tanpa latar (default)"></button>
+              <button class="ann-hl-sw ann-hl-none" onmousedown="event.preventDefault(); annTextSetBoxColor(null)" title="Tanpa latar"></button>
               <button class="ann-hl-sw" style="background:#1e293b" onmousedown="event.preventDefault(); annTextSetBoxColor('rgba(15,23,42,0.72)')" title="Gelap"></button>
               <button class="ann-hl-sw" style="background:#fff;border-color:#94a3b8" onmousedown="event.preventDefault(); annTextSetBoxColor('#ffffff')" title="Putih"></button>
               <button class="ann-hl-sw" style="background:#fde047" onmousedown="event.preventDefault(); annTextSetBoxColor('#fde047')" title="Kuning"></button>
@@ -10887,7 +10999,7 @@
     </div>
   </div>
   <div class="ann-foot">
-    <span>Seret pada foto untuk menggambar &nbsp;·&nbsp; <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> undo &nbsp;·&nbsp; <span class="kbd">Ctrl</span>+Scroll zoom &nbsp;·&nbsp; <span class="kbd">Esc</span> batal</span>
+    <span>Seret pada foto untuk menggambar &nbsp;·&nbsp; Double-click / double tap teks untuk edit, tahan teks untuk geser &nbsp;·&nbsp; <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> undo &nbsp;·&nbsp; <span class="kbd">Ctrl</span>+Scroll zoom &nbsp;·&nbsp; <span class="kbd">Esc</span> batal</span>
     <span class="ann-count" id="annCount">Belum ada anotasi</span>
   </div>
 </div>
@@ -12042,6 +12154,7 @@ function annRotateCurrent(delta) {
   let annCur = null;   // { id, side, ann[], redo[], tool, color, width, img, W, H }
   let annDrag = null;  // gambar yang sedang ditarik
   let annMoveDrag = null;  // { index, startX, startY, before } -- anotasi yang sedang digeser (alat Pindah)
+  let annLastTextTap = null;
 
   function annOpen(id, side) {
     const d = storeData[id];
@@ -12423,9 +12536,16 @@ function annRotateCurrent(delta) {
   function annStart(e) {
     if (!annCur) return;
     e.preventDefault();
+    if (e.pointerId != null) document.getElementById('annCanvas').setPointerCapture(e.pointerId);
     if (e.touches && e.touches.length !== 1) {
       annDrag = null;
       annMoveDrag = null;
+      return;
+    }
+    if (e.pointerType === 'touch' && e.isPrimary === false) {
+      annDrag = null;
+      annMoveDrag = null;
+      if (annCur) annCur.cropDrag = null;
       return;
     }
 
@@ -12434,6 +12554,28 @@ function annRotateCurrent(delta) {
     if (annCur.textEditing) annTextCommitIfOpen();
 
     const p = annPos(e);
+
+    if (annCur.tool !== 'crop') {
+      const idx = annFindShapeAt(p.x, p.y);
+      const shape = idx >= 0 ? annCur.ann[idx] : null;
+      if (shape && (shape.t === 'richtext' || shape.t === 'text')) {
+        const now = Date.now();
+        if (annLastTextTap && annLastTextTap.index === idx &&
+            now - annLastTextTap.time <= 450 &&
+            Math.hypot(p.x - annLastTextTap.x, p.y - annLastTextTap.y) <= 0.04) {
+          annLastTextTap = null;
+          annMoveDrag = null;
+          annTextOpen(p);
+          return;
+        }
+        annLastTextTap = { index: idx, time: now, x: p.x, y: p.y };
+        annMoveDrag = {
+          index: idx, startX: p.x, startY: p.y,
+          before: JSON.parse(JSON.stringify(shape)), textGesture: true, moved: false
+        };
+        return;
+      }
+    }
 
     if (annCur.tool === 'text') {
       annTextOpen(p);
@@ -12476,10 +12618,15 @@ function annRotateCurrent(delta) {
       annDraw();
       return;
     }
-    if (annCur && annCur.tool === 'move' && annMoveDrag) {
-      e.preventDefault();
+    if (annCur && annMoveDrag && (annCur.tool === 'move' || annMoveDrag.textGesture)) {
       const p = annPos(e);
-      annApplyShapeOffset(annCur.ann[annMoveDrag.index], annMoveDrag.before, p.x - annMoveDrag.startX, p.y - annMoveDrag.startY);
+      const dx = p.x - annMoveDrag.startX, dy = p.y - annMoveDrag.startY;
+      const cv = document.getElementById('annCanvas');
+      if (annMoveDrag.textGesture && !annMoveDrag.moved &&
+          Math.hypot(dx * cv.clientWidth, dy * cv.clientHeight) < 6) return;
+      annMoveDrag.moved = true;
+      e.preventDefault();
+      annApplyShapeOffset(annCur.ann[annMoveDrag.index], annMoveDrag.before, dx, dy);
       annDraw();
       return;
     }
@@ -12506,7 +12653,7 @@ function annRotateCurrent(delta) {
       annDraw();
       return;
     }
-    if (annCur && annCur.tool === 'move' && annMoveDrag) {
+    if (annCur && annMoveDrag && (annCur.tool === 'move' || annMoveDrag.textGesture)) {
       if (e) e.preventDefault();
       const { index, before } = annMoveDrag;
       const after = JSON.parse(JSON.stringify(annCur.ann[index]));
@@ -12516,6 +12663,7 @@ function annRotateCurrent(delta) {
       if (JSON.stringify(before) !== JSON.stringify(after)) {
         annPushAction({ type: 'editShape', index, before, after });
       }
+      if (annMoveDrag.textGesture && annMoveDrag.moved) annLastTextTap = null;
       annMoveDrag = null;
       annDraw();
       return;
@@ -12667,12 +12815,10 @@ function annRotateCurrent(delta) {
   // Pasang listener kanvas sekali saja saat halaman dimuat
   (function initAnnCanvas() {
     const cv = document.getElementById('annCanvas');
-    cv.addEventListener('mousedown', annStart);
-    cv.addEventListener('mousemove', annMove);
-    window.addEventListener('mouseup', annEnd);
-    cv.addEventListener('touchstart', annStart, { passive: false });
-    cv.addEventListener('touchmove', annMove, { passive: false });
-    cv.addEventListener('touchend', annEnd, { passive: false });
+    cv.addEventListener('pointerdown', annStart);
+    cv.addEventListener('pointermove', annMove);
+    window.addEventListener('pointerup', annEnd);
+    window.addEventListener('pointercancel', annEnd);
 
     // Ctrl/Cmd + scroll untuk zoom -- scroll biasa tetap dipakai untuk
     // menggulir (pan) saat foto sedang diperbesar melebihi layar.
@@ -12877,9 +13023,8 @@ function annRotateCurrent(delta) {
   function annTextHitTest(px, py) {
     for (let i = annCur.ann.length - 1; i >= 0; i--) {
       const a = annCur.ann[i];
-      if (a.t !== 'richtext' || !a._lastBox) continue;
-      const b = a._lastBox;
-      if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) return i;
+      if ((a.t !== 'richtext' && a.t !== 'text') || !a._lastBox) continue;
+      if (annHitTestShape(a, px, py, annCur.W, annCur.H)) return i;
     }
     return -1;
   }
@@ -12899,22 +13044,34 @@ function annRotateCurrent(delta) {
       const shape = annCur.ann[annTextEditIndex];
       leftPx = shape.x1 * cw;
       topPx = shape.y1 * ch;
-      widthPx = Math.max(90, (shape.boxW || 0.22) * cw);
-      body.innerHTML = annBlocksToHTML(shape.blocks, cw);
-      // Data lama (dibuat sebelum ada fitur pilih latar) tidak punya field
-      // boxColor sama sekali -- supaya tampilannya tidak tiba-tiba berubah,
-      // itu dianggap masih memakai latar gelap seperti sedia kala. Kalau
-      // field-nya SUDAH ada (null atau warna), pakai persis nilai itu.
-      annCur.curTextBoxColor = (shape.boxColor === undefined) ? 'rgba(15,23,42,0.72)' : shape.boxColor;
+      if (shape.t === 'text') {
+        const legacyText = document.createElement('span');
+        legacyText.textContent = shape.txt || '';
+        legacyText.style.color = shape.c || annCur.color || '#fff';
+        legacyText.style.fontWeight = '700';
+        legacyText.style.fontSize = Math.max(12, Math.round(cw * 0.032 * (shape.w || 2) / 2)) + 'px';
+        body.replaceChildren(legacyText);
+        widthPx = Math.max(90, (shape._lastBox.w || 0.22) * cw);
+        annCur.curTextBoxColor = 'rgba(15,23,42,0.82)';
+      } else {
+        widthPx = Math.max(90, (shape.boxW || 0.22) * cw);
+        body.innerHTML = annBlocksToHTML(shape.blocks, cw);
+        // Data lama tanpa boxColor tetap memakai latar gelap; null berarti
+        // latar sengaja dihapus.
+        annCur.curTextBoxColor = (shape.boxColor === undefined) ? 'rgba(15,23,42,0.72)' : shape.boxColor;
+      }
     } else {
       leftPx = p.x * cw;
       topPx = p.y * ch;
       widthPx = Math.max(160, cw * 0.22);
       body.innerHTML = '';
-      // Kotak teks BARU: defaultnya TANPA latar (teks langsung di atas foto).
-      annCur.curTextBoxColor = null;
+      // Kotak teks baru memakai latar gelap semi-transparan agar langsung terbaca.
+      annCur.curTextBoxColor = 'rgba(15,23,42,0.82)';
     }
 
+    widthPx = Math.min(cw, Math.max(Math.min(90, cw), widthPx));
+    leftPx = Math.max(0, Math.min(leftPx, cw - widthPx));
+    topPx = Math.max(0, Math.min(topPx, ch - 40));
     editor.style.left = Math.round(leftPx) + 'px';
     editor.style.top = Math.round(topPx) + 'px';
     body.style.width = Math.round(widthPx) + 'px';
@@ -13261,7 +13418,7 @@ function annRotateCurrent(delta) {
     // a.boxColor === undefined -> anotasi LAMA dari sebelum fitur ini ada,
     // tetap dianggap pakai latar gelap seperti sedia kala supaya tampilannya
     // tidak berubah tiba-tiba. a.boxColor === null -> memang sengaja dipilih
-    // TANPA latar (default utk teks baru sekarang). Selain itu -> warna terpilih.
+    // Latar teks baru gelap semi-transparan; null tetap berarti tanpa latar.
     const bgColor = (a.boxColor === undefined) ? 'rgba(15, 23, 42, 0.72)' : a.boxColor;
     const hasBox = !!bgColor;
     // Tanpa kotak latar, tidak perlu jarak tepi selebar itu -- ruang teksnya
@@ -13301,6 +13458,15 @@ function annRotateCurrent(delta) {
           words.forEach(w => {
             ctx.font = annFontString(style);
             const ww = ctx.measureText(w).width;
+            if (ww > maxLineW && w.trim() !== '') {
+              Array.from(w).forEach(char => {
+                const charW = ctx.measureText(char).width;
+                if (curW + charW > maxLineW && curRuns.length > 0) pushLine();
+                curRuns.push({ text: char, style, width: charW });
+                curW += charW;
+              });
+              return;
+            }
             if (curW + ww > maxLineW && curRuns.length > 0 && w.trim() !== '') pushLine();
             curRuns.push({ text: w, style, width: ww });
             curW += ww;
@@ -13316,6 +13482,9 @@ function annRotateCurrent(delta) {
     lines.forEach(l => { boxH += l.lineH; });
     const bx = Math.max(0, Math.min(boxX, W - boxW));
     const by = Math.max(0, Math.min(boxY, H - boxH));
+    ctx.beginPath();
+    ctx.rect(bx, by, boxW, boxH);
+    ctx.clip();
 
     if (hasBox) {
       ctx.fillStyle = bgColor;
@@ -14534,11 +14703,12 @@ function annRotateCurrent(delta) {
     }
 
     .ann-text-body {
-      min-width: 90px; min-height: 1.4em; max-width: 74vw;
-      background: transparent; color: #fff;
+      box-sizing: border-box; min-width: 90px; min-height: 1.4em; max-width: 74vw;
+      color: #fff;
       border: 2px dashed #3b82f6; border-radius: 6px;
       padding: 8px 10px; font: 400 16px 'Segoe UI', Arial, sans-serif; line-height: 1.32;
-      outline: none; cursor: text; overflow-wrap: break-word;
+      outline: none; cursor: text; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+      background: rgba(15,23,42,0.82);
     }
     .ann-text-body:empty::before {
       content: 'Ketik di sini…'; color: rgba(203,213,225,0.95);
@@ -15032,9 +15202,9 @@ function annRotateCurrent(delta) {
           </div>
           <span class="ann-tb-sep"></span>
           <div class="ann-hl-wrap">
-            <button id="annTB-boxbg" onmousedown="event.preventDefault(); annTextToggleBoxMenu()" title="Latar kotak teks (opsional) — defaultnya TANPA latar, teks langsung di atas foto">▭</button>
+            <button id="annTB-boxbg" onmousedown="event.preventDefault(); annTextToggleBoxMenu()" title="Warna latar kotak teks">▭</button>
             <div class="ann-hl-menu" id="annBoxBgMenu">
-              <button class="ann-hl-sw ann-hl-none" onmousedown="event.preventDefault(); annTextSetBoxColor(null)" title="Tanpa latar (default)"></button>
+              <button class="ann-hl-sw ann-hl-none" onmousedown="event.preventDefault(); annTextSetBoxColor(null)" title="Tanpa latar"></button>
               <button class="ann-hl-sw" style="background:#1e293b" onmousedown="event.preventDefault(); annTextSetBoxColor('rgba(15,23,42,0.72)')" title="Gelap"></button>
               <button class="ann-hl-sw" style="background:#fff;border-color:#94a3b8" onmousedown="event.preventDefault(); annTextSetBoxColor('#ffffff')" title="Putih"></button>
               <button class="ann-hl-sw" style="background:#fde047" onmousedown="event.preventDefault(); annTextSetBoxColor('#fde047')" title="Kuning"></button>
@@ -15065,7 +15235,7 @@ function annRotateCurrent(delta) {
     </div>
   </div>
   <div class="ann-foot">
-    <span>Seret pada foto untuk menggambar &nbsp;·&nbsp; <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> undo &nbsp;·&nbsp; <span class="kbd">Ctrl</span>+Scroll zoom &nbsp;·&nbsp; <span class="kbd">Esc</span> batal</span>
+    <span>Seret pada foto untuk menggambar &nbsp;·&nbsp; Double-click / double tap teks untuk edit, tahan teks untuk geser &nbsp;·&nbsp; <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> undo &nbsp;·&nbsp; <span class="kbd">Ctrl</span>+Scroll zoom &nbsp;·&nbsp; <span class="kbd">Esc</span> batal</span>
     <span class="ann-count" id="annCount">Belum ada anotasi</span>
   </div>
 </div>
@@ -16407,6 +16577,7 @@ function annRotateCurrent(delta) {
   let annCur = null;   // { id, side, ann[], redo[], tool, color, width, img, W, H }
   let annDrag = null;  // gambar yang sedang ditarik
   let annMoveDrag = null;  // { index, startX, startY, before } -- anotasi yang sedang digeser (alat Pindah)
+  let annLastTextTap = null;
 
   function annOpen(id, side) {
     const d = storeData[id];
@@ -16788,9 +16959,16 @@ function annRotateCurrent(delta) {
   function annStart(e) {
     if (!annCur) return;
     e.preventDefault();
+    if (e.pointerId != null) document.getElementById('annCanvas').setPointerCapture(e.pointerId);
     if (e.touches && e.touches.length !== 1) {
       annDrag = null;
       annMoveDrag = null;
+      return;
+    }
+    if (e.pointerType === 'touch' && e.isPrimary === false) {
+      annDrag = null;
+      annMoveDrag = null;
+      if (annCur) annCur.cropDrag = null;
       return;
     }
 
@@ -16799,6 +16977,28 @@ function annRotateCurrent(delta) {
     if (annCur.textEditing) annTextCommitIfOpen();
 
     const p = annPos(e);
+
+    if (annCur.tool !== 'crop') {
+      const idx = annFindShapeAt(p.x, p.y);
+      const shape = idx >= 0 ? annCur.ann[idx] : null;
+      if (shape && (shape.t === 'richtext' || shape.t === 'text')) {
+        const now = Date.now();
+        if (annLastTextTap && annLastTextTap.index === idx &&
+            now - annLastTextTap.time <= 450 &&
+            Math.hypot(p.x - annLastTextTap.x, p.y - annLastTextTap.y) <= 0.04) {
+          annLastTextTap = null;
+          annMoveDrag = null;
+          annTextOpen(p);
+          return;
+        }
+        annLastTextTap = { index: idx, time: now, x: p.x, y: p.y };
+        annMoveDrag = {
+          index: idx, startX: p.x, startY: p.y,
+          before: JSON.parse(JSON.stringify(shape)), textGesture: true, moved: false
+        };
+        return;
+      }
+    }
 
     if (annCur.tool === 'text') {
       annTextOpen(p);
@@ -16841,10 +17041,15 @@ function annRotateCurrent(delta) {
       annDraw();
       return;
     }
-    if (annCur && annCur.tool === 'move' && annMoveDrag) {
-      e.preventDefault();
+    if (annCur && annMoveDrag && (annCur.tool === 'move' || annMoveDrag.textGesture)) {
       const p = annPos(e);
-      annApplyShapeOffset(annCur.ann[annMoveDrag.index], annMoveDrag.before, p.x - annMoveDrag.startX, p.y - annMoveDrag.startY);
+      const dx = p.x - annMoveDrag.startX, dy = p.y - annMoveDrag.startY;
+      const cv = document.getElementById('annCanvas');
+      if (annMoveDrag.textGesture && !annMoveDrag.moved &&
+          Math.hypot(dx * cv.clientWidth, dy * cv.clientHeight) < 6) return;
+      annMoveDrag.moved = true;
+      e.preventDefault();
+      annApplyShapeOffset(annCur.ann[annMoveDrag.index], annMoveDrag.before, dx, dy);
       annDraw();
       return;
     }
@@ -16871,7 +17076,7 @@ function annRotateCurrent(delta) {
       annDraw();
       return;
     }
-    if (annCur && annCur.tool === 'move' && annMoveDrag) {
+    if (annCur && annMoveDrag && (annCur.tool === 'move' || annMoveDrag.textGesture)) {
       if (e) e.preventDefault();
       const { index, before } = annMoveDrag;
       const after = JSON.parse(JSON.stringify(annCur.ann[index]));
@@ -16881,6 +17086,7 @@ function annRotateCurrent(delta) {
       if (JSON.stringify(before) !== JSON.stringify(after)) {
         annPushAction({ type: 'editShape', index, before, after });
       }
+      if (annMoveDrag.textGesture && annMoveDrag.moved) annLastTextTap = null;
       annMoveDrag = null;
       annDraw();
       return;
@@ -17032,12 +17238,10 @@ function annRotateCurrent(delta) {
   // Pasang listener kanvas sekali saja saat halaman dimuat
   (function initAnnCanvas() {
     const cv = document.getElementById('annCanvas');
-    cv.addEventListener('mousedown', annStart);
-    cv.addEventListener('mousemove', annMove);
-    window.addEventListener('mouseup', annEnd);
-    cv.addEventListener('touchstart', annStart, { passive: false });
-    cv.addEventListener('touchmove', annMove, { passive: false });
-    cv.addEventListener('touchend', annEnd, { passive: false });
+    cv.addEventListener('pointerdown', annStart);
+    cv.addEventListener('pointermove', annMove);
+    window.addEventListener('pointerup', annEnd);
+    window.addEventListener('pointercancel', annEnd);
 
     // Ctrl/Cmd + scroll untuk zoom -- scroll biasa tetap dipakai untuk
     // menggulir (pan) saat foto sedang diperbesar melebihi layar.
@@ -17242,9 +17446,8 @@ function annRotateCurrent(delta) {
   function annTextHitTest(px, py) {
     for (let i = annCur.ann.length - 1; i >= 0; i--) {
       const a = annCur.ann[i];
-      if (a.t !== 'richtext' || !a._lastBox) continue;
-      const b = a._lastBox;
-      if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) return i;
+      if ((a.t !== 'richtext' && a.t !== 'text') || !a._lastBox) continue;
+      if (annHitTestShape(a, px, py, annCur.W, annCur.H)) return i;
     }
     return -1;
   }
@@ -17264,22 +17467,34 @@ function annRotateCurrent(delta) {
       const shape = annCur.ann[annTextEditIndex];
       leftPx = shape.x1 * cw;
       topPx = shape.y1 * ch;
-      widthPx = Math.max(90, (shape.boxW || 0.22) * cw);
-      body.innerHTML = annBlocksToHTML(shape.blocks, cw);
-      // Data lama (dibuat sebelum ada fitur pilih latar) tidak punya field
-      // boxColor sama sekali -- supaya tampilannya tidak tiba-tiba berubah,
-      // itu dianggap masih memakai latar gelap seperti sedia kala. Kalau
-      // field-nya SUDAH ada (null atau warna), pakai persis nilai itu.
-      annCur.curTextBoxColor = (shape.boxColor === undefined) ? 'rgba(15,23,42,0.72)' : shape.boxColor;
+      if (shape.t === 'text') {
+        const legacyText = document.createElement('span');
+        legacyText.textContent = shape.txt || '';
+        legacyText.style.color = shape.c || annCur.color || '#fff';
+        legacyText.style.fontWeight = '700';
+        legacyText.style.fontSize = Math.max(12, Math.round(cw * 0.032 * (shape.w || 2) / 2)) + 'px';
+        body.replaceChildren(legacyText);
+        widthPx = Math.max(90, (shape._lastBox.w || 0.22) * cw);
+        annCur.curTextBoxColor = 'rgba(15,23,42,0.82)';
+      } else {
+        widthPx = Math.max(90, (shape.boxW || 0.22) * cw);
+        body.innerHTML = annBlocksToHTML(shape.blocks, cw);
+        // Data lama tanpa boxColor tetap memakai latar gelap; null berarti
+        // latar sengaja dihapus.
+        annCur.curTextBoxColor = (shape.boxColor === undefined) ? 'rgba(15,23,42,0.72)' : shape.boxColor;
+      }
     } else {
       leftPx = p.x * cw;
       topPx = p.y * ch;
       widthPx = Math.max(160, cw * 0.22);
       body.innerHTML = '';
-      // Kotak teks BARU: defaultnya TANPA latar (teks langsung di atas foto).
-      annCur.curTextBoxColor = null;
+      // Kotak teks baru memakai latar gelap semi-transparan agar langsung terbaca.
+      annCur.curTextBoxColor = 'rgba(15,23,42,0.82)';
     }
 
+    widthPx = Math.min(cw, Math.max(Math.min(90, cw), widthPx));
+    leftPx = Math.max(0, Math.min(leftPx, cw - widthPx));
+    topPx = Math.max(0, Math.min(topPx, ch - 40));
     editor.style.left = Math.round(leftPx) + 'px';
     editor.style.top = Math.round(topPx) + 'px';
     body.style.width = Math.round(widthPx) + 'px';
@@ -17626,7 +17841,7 @@ function annRotateCurrent(delta) {
     // a.boxColor === undefined -> anotasi LAMA dari sebelum fitur ini ada,
     // tetap dianggap pakai latar gelap seperti sedia kala supaya tampilannya
     // tidak berubah tiba-tiba. a.boxColor === null -> memang sengaja dipilih
-    // TANPA latar (default utk teks baru sekarang). Selain itu -> warna terpilih.
+    // Latar teks baru gelap semi-transparan; null tetap berarti tanpa latar.
     const bgColor = (a.boxColor === undefined) ? 'rgba(15, 23, 42, 0.72)' : a.boxColor;
     const hasBox = !!bgColor;
     // Tanpa kotak latar, tidak perlu jarak tepi selebar itu -- ruang teksnya
@@ -17666,6 +17881,15 @@ function annRotateCurrent(delta) {
           words.forEach(w => {
             ctx.font = annFontString(style);
             const ww = ctx.measureText(w).width;
+            if (ww > maxLineW && w.trim() !== '') {
+              Array.from(w).forEach(char => {
+                const charW = ctx.measureText(char).width;
+                if (curW + charW > maxLineW && curRuns.length > 0) pushLine();
+                curRuns.push({ text: char, style, width: charW });
+                curW += charW;
+              });
+              return;
+            }
             if (curW + ww > maxLineW && curRuns.length > 0 && w.trim() !== '') pushLine();
             curRuns.push({ text: w, style, width: ww });
             curW += ww;
@@ -17681,6 +17905,9 @@ function annRotateCurrent(delta) {
     lines.forEach(l => { boxH += l.lineH; });
     const bx = Math.max(0, Math.min(boxX, W - boxW));
     const by = Math.max(0, Math.min(boxY, H - boxH));
+    ctx.beginPath();
+    ctx.rect(bx, by, boxW, boxH);
+    ctx.clip();
 
     if (hasBox) {
       ctx.fillStyle = bgColor;
