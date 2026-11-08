@@ -358,6 +358,8 @@
   .jo-mode-control .track::after { content: ''; display: block; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s ease; }
   .jo-mode-control input:checked + .track { background: #047857; }
   .jo-mode-control input:checked + .track::after { transform: translateX(16px); }
+  .jo-mode-control input:disabled + .track { opacity: .55; cursor: not-allowed; }
+  .jo-mode-notice { color: #cbd5e1; font-size: 10px; font-weight: 500; }
 
   /* ===== PANGGUNG IFRAME ===== */
   .jo-stage { flex: 1; position: relative; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
@@ -393,6 +395,8 @@
     .jo-bar { height: auto; min-height: 46px; padding: max(56px, env(safe-area-inset-top)) 10px 8px; gap: 8px; }
     .jo-form-select { width: 100%; flex-basis: 100%; }
     #joLang-B { margin-left: auto; }
+    .jo-mode-control { flex-wrap: wrap; white-space: normal; }
+    .jo-mode-notice { flex-basis: 100%; }
   }
   @media (max-width: 2000px) and (pointer: coarse) {
     .jo-launch {
@@ -429,11 +433,12 @@
   </select>
   <div class="jo-mode-control" id="joModeControl" hidden>
     <span>Mode tampilan</span>
-    <label title="Beralih antara tampilan New dan Classic">
+    <label id="joModeToggleLabel" title="Beralih antara tampilan New dan Classic">
       <input type="checkbox" id="joModeToggle" onchange="joSetLayoutMode(this.checked)">
       <span class="track" aria-hidden="true"></span>
     </label>
     <span id="joModeLabel">New</span>
+    <span class="jo-mode-notice" id="joModeNotice" hidden>Classic tersedia di desktop</span>
   </div>
   <div class="jo-tabs">
     <button class="jo-tab b" id="joTab-b" onclick="joOpen('b')">
@@ -7239,6 +7244,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
 
   // ================= MODE CLASSIC / NEW =================
   const PHOTO_LAYOUT_KEY = 'qcPhotoInspection_layoutMode_v1';
+  const photoCompactLayout = window.matchMedia('(max-width: 1024px)');
   function applyPhotoLayout(mode, remember) {
     const classic = mode === 'classic';
     const root = document.getElementById('inspectionFormContainer');
@@ -7258,7 +7264,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   // ================= INISIALISASI =================
   let savedPhotoLayout = 'new';
   try { savedPhotoLayout = localStorage.getItem(PHOTO_LAYOUT_KEY) || 'new'; } catch (e) {}
-  applyPhotoLayout(savedPhotoLayout, false);
+  applyPhotoLayout(photoCompactLayout.matches ? 'new' : savedPhotoLayout, false);
   onQualityChange();
   addSheet({}, { silent: true });
   checkDraftOnLoad();
@@ -13143,9 +13149,10 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   // Classic = enam kotak foto seperti form resmi dari HTML referensi.
   // New = kartu editor yang sudah ada. Keduanya membaca data yang sama,
   // sehingga mengganti mode tidak menggandakan foto atau mengubah ekspor.
+  const pilingCompactLayout = window.matchMedia('(max-width: 1024px)');
   let pilingLayoutMode = 'new';
   function applyPilingLayout(mode, remember = true) {
-    pilingLayoutMode = mode === 'classic' ? 'classic' : 'new';
+    pilingLayoutMode = mode === 'classic' && !pilingCompactLayout.matches ? 'classic' : 'new';
     const root = document.querySelector('.container');
     if (root) root.classList.toggle('piling-classic', pilingLayoutMode === 'classic');
     const toggle = document.getElementById('pilingLayoutToggle');
@@ -13160,7 +13167,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
     applyPilingLayout(isClassic ? 'classic' : 'new');
   }
   window.addEventListener('message', function (e) {
-    if (e.data && e.data.jo === 'layout-mode') applyPilingLayout(e.data.mode);
+    if (e.data && e.data.jo === 'layout-mode') applyPilingLayout(e.data.mode, false);
   });
 
   // 6 foto per halaman cetak (2 kolom x 3 baris), sama seperti form aslinya.
@@ -16438,7 +16445,7 @@ function annRotateCurrent(delta) {
   addSheet({}, { silent: true });
   checkDraftOnLoad();
 
-  applyPilingLayout((() => { try { return localStorage.getItem('qcPiling_layoutMode') || 'new'; } catch (e) { return 'new'; } })(), false);
+  applyPilingLayout(pilingCompactLayout.matches ? 'new' : (() => { try { return localStorage.getItem('qcPiling_layoutMode') || 'new'; } catch (e) { return 'new'; } })(), false);
   // Panduan muncul otomatis HANYA saat pertama kali dipakai di browser ini.
   try {
     if (!localStorage.getItem(TUTORIAL_SEEN_KEY)) setTimeout(openTutorial, 600);
@@ -30070,20 +30077,39 @@ async function dlAll() {
   } catch (e) {}
   function joSyncLayoutMode(code) {
     var supported = code === 'b' || code === 'd';
+    var compact = supported && joCompactLayout.matches;
+    var effectiveMode = compact ? 'new' : joLayoutMode;
     var control = document.getElementById('joModeControl');
     var toggle = document.getElementById('joModeToggle');
     var label = document.getElementById('joModeLabel');
+    var notice = document.getElementById('joModeNotice');
     if (control) control.hidden = !supported;
-    if (toggle) toggle.checked = joLayoutMode === 'classic';
-    if (label) label.textContent = joLayoutMode === 'classic' ? 'Classic' : 'New';
+    if (toggle) {
+      toggle.checked = effectiveMode === 'classic';
+      toggle.disabled = compact;
+      toggle.setAttribute('aria-label', compact ? 'Mode New aktif di layar kecil' : 'Pilih mode Classic atau New');
+    }
+    if (label) label.textContent = compact ? 'New (mobile)' : effectiveMode === 'classic' ? 'Classic' : 'New';
+    if (notice) notice.hidden = !compact;
     var frame = supported && joFrames[code];
-    if (frame && frame.contentWindow) frame.contentWindow.postMessage({ jo: 'layout-mode', mode: joLayoutMode }, '*');
+    if (frame && frame.contentWindow) frame.contentWindow.postMessage({ jo: 'layout-mode', mode: effectiveMode }, '*');
   }
   function joSetLayoutMode(classic) {
+    if (classic && joCompactLayout.matches) {
+      joSyncLayoutMode(joActive);
+      return;
+    }
     joLayoutMode = classic ? 'classic' : 'new';
     try { localStorage.setItem('joFormLayoutMode', joLayoutMode); } catch (e) {}
     joSyncLayoutMode(joActive);
   }
+  var joCompactLayout = window.matchMedia('(max-width: 1024px)');
+  if (joCompactLayout.addEventListener) joCompactLayout.addEventListener('change', function () {
+    if (joActive) joSyncLayoutMode(joActive);
+  });
+  else joCompactLayout.addListener(function () {
+    if (joActive) joSyncLayoutMode(joActive);
+  });
 
   function joOpen(code) {
     if (!JO_FORMS[code]) return;
