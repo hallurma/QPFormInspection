@@ -751,6 +751,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .xtools.big .lwl input { width: 110px; }
   .xpop { position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,.6); display: flex; align-items: center; justify-content: center; }
   .xpop .box { background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 14px 44px rgba(0,0,0,.35); }
+  .xpop .box.chart-box { max-height: calc(100vh - 28px); overflow: auto; }
+  .chart-editor { margin-top: 8px; max-height: 150px; overflow: auto; font: 12px 'Segoe UI',Arial,sans-serif; }
+  .chart-editor table { border-collapse: collapse; width: 100%; }
+  .chart-editor th,.chart-editor td { border: 1px solid #cbd5e1; padding: 3px 5px; text-align: center; }
+  .chart-editor input { width: 110px; padding: 3px 5px; border: 1px solid #cbd5e1; border-radius: 4px; }
+  .chart-editor button { padding: 4px 8px; }
   .xpop h3 { margin: 0 0 8px; font: 700 14px 'Segoe UI', Arial, sans-serif; }
   .xpop canvas { display: block; border: 1px dashed #94a3b8; background: #f8fbff; touch-action: none; cursor: crosshair; }
   .xpop .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
@@ -785,7 +791,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   <button type="button" onclick="document.getElementById('draftIn').click()">📂 Muat Draft</button>
   <input type="file" id="draftIn" accept=".json" style="display:none">
   <button type="button" onclick="window.print()">🖨 Print / PDF</button>
-  <button type="button" class="pri" onclick="dlAll()">📥 Generate Excel (3 file)</button>
+  <button type="button" class="pri" onclick="dlAll()">📥 Generate Excel (1 file)</button>
   <button type="button" class="warn" onclick="resetAll()">Form Baru</button>
 </div>
 
@@ -793,7 +799,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   <section class="howto-box" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
     <header class="howto-head"><h2 id="howtoTitle">Cara Pakai — Paket Pengecoran 3-in-1</h2><button type="button" class="howto-close" onclick="howtoClose()">Tutup ✕</button></header>
     <div class="howto-body">
-      <p>Ikuti urutan tiga halaman. Isi kotak kuning, pilih OK/NG, lalu simpan draft atau buat tiga file Excel.</p>
+      <p>Ikuti urutan tiga halaman. Isi kotak kuning, pilih OK/NG, lalu simpan draft atau buat satu workbook Excel.</p>
       <svg class="howto-shot" viewBox="0 0 900 300" role="img" aria-label="Panduan visual tiga langkah paket form pengecoran" xmlns="http://www.w3.org/2000/svg">
         <rect width="900" height="300" fill="#f8fafc"/><text x="450" y="28" text-anchor="middle" font-family="Arial" font-size="17" font-weight="bold" fill="#0f172a">Alur penggunaan Paket Pengecoran</text>
         <g font-family="Arial" fill="#0f172a">
@@ -807,7 +813,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           <text x="659" y="120" font-size="12">Isi detail pelaksanaan pengecoran.</text><text x="659" y="140" font-size="12">Tanda tangani pada area tanda tangan.</text><rect x="659" y="158" width="196" height="42" rx="6" fill="#dcfce7" stroke="#22c55e"/><text x="757" y="184" text-anchor="middle" font-size="12">Simpan Draft / Generate Excel</text><text x="757" y="225" text-anchor="middle" font-size="11" fill="#64748b">QP-006-08 (d)</text>
         </g><text x="450" y="278" text-anchor="middle" font-family="Arial" font-size="12" fill="#475569">Gunakan navigasi halaman di bar atas untuk berpindah antar form.</text>
       </svg>
-      <ol><li>Isi halaman <b>Before Pouring</b>, termasuk data proyek dan hasil pemeriksaan.</li><li>Pada halaman <b>Rebar Checklist</b>, pilih tipe struktur di dropdown, lalu lengkapi pemeriksaan dan anotasi jika diperlukan.</li><li>Lengkapi <b>Laporan Kerja Cor</b>. Tanda tangan bisa digambar langsung atau diperbesar.</li><li>Gunakan <b>Simpan Draft</b> untuk melanjutkan nanti. <b>Generate Excel (3 file)</b> mengunduh keluaran ketiga form.</li></ol>
+      <ol><li>Isi halaman <b>Before Pouring</b>, termasuk data proyek dan hasil pemeriksaan.</li><li>Pada halaman <b>Rebar Checklist</b>, pilih tipe struktur di dropdown, lalu lengkapi pemeriksaan dan anotasi jika diperlukan.</li><li>Lengkapi <b>Laporan Kerja Cor</b>. Tanda tangan bisa digambar langsung atau diperbesar.</li><li>Gunakan <b>Simpan Draft</b> untuk melanjutkan nanti. <b>Generate Excel (1 file)</b> mengunduh satu workbook berisi ketiga form.</li></ol>
       <p><b>Catatan:</b> perubahan tersimpan otomatis di browser. Unduh draft JSON sebagai cadangan sebelum berpindah perangkat.</p>
     </div>
   </section>
@@ -816,7 +822,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <div class="hint">
   Tiga form pengecoran dalam satu berkas — gulir dari atas ke bawah. Isi langsung di kotak berwarna kuning.
   Kotak tanda tangan, Key Plan, dan grafik bisa dicoret langsung atau lewat <b>Perbesar</b>; Key Plan juga bisa disisipi gambar.
-  Kotak <b>OK / NG</b> cukup diklik. <b>Generate Excel</b> menghasilkan tiga berkas yang memakai form asli, jadi bentuknya tidak berubah.
+  Kotak <b>OK / NG</b> cukup diklik. <b>Generate Excel</b> menghasilkan satu workbook berisi ketiga form dengan bentuk asli. Jika ingin file terpisah, gunakan tombol <b>Excel halaman ini</b>.
 </div>
 
 
@@ -1203,7 +1209,7 @@ function optRich(group, parts) {
   }).join('');
 }
 
-async function exportExcel() {
+async function exportExcel(shouldDownload) {
   try {
     if (typeof JSZip === 'undefined') throw new Error('Pustaka JSZip tidak termuat.');
     msg('Menyusun Excel…');
@@ -1340,8 +1346,10 @@ async function exportExcel() {
 
     var blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', compression: 'DEFLATE' });
     var tgl = (v('fPourDate') || v('fInspDate') || new Date().toISOString()).slice(0, 10);
-    download(blob, 'QP-006-08(a) Inspection Before Pouring ' + tgl + '.xlsx');
+    var result = { blob: blob, name: 'QP-006-08(a) Inspection Before Pouring ' + tgl + '.xlsx' };
+    if (shouldDownload !== false) download(result.blob, result.name);
     msg('Excel dibuat.');
+    return result;
   } catch (e) {
     alert('Gagal membuat Excel:\n' + e.message);
   }
@@ -1530,7 +1538,7 @@ var XLF = (function () {
     var box = el('div', 'xd' + (z.sig ? ' xsig' : ' xann'));
     box.id = zid(f, s, i);
     box.style.cssText = 'left:' + z.x + 'px;top:' + z.y + 'px;width:' + z.w + 'px;height:' + z.h + 'px';
-    var hint = z.sig ? '✍ tanda tangan' : (z.img ? '✏ anotasi / 🖼 sisipkan gambar' : '✏ coret / anotasi di sini');
+    var hint = z.key === 'grafik' ? 'Isi titik jam dan volume lewat Perbesar' : (z.sig ? '✍ tanda tangan' : (z.img ? '✏ anotasi / 🖼 sisipkan gambar' : '✏ coret / anotasi di sini'));
     box.innerHTML = '<canvas></canvas><span class="xhint">' + hint + '</span><div class="xtools">' + toolsHTML(z, false) + '</div>';
     ovl.appendChild(box);
     var cv = box.querySelector('canvas'), tools = box.querySelector('.xtools');
@@ -1603,12 +1611,68 @@ var XLF = (function () {
     }
     x.restore();
   }
+  function drawChart(x, points, w, h) {
+    var valid = (points || []).map(function (p) {
+      var parts = String(p.time || '').split(':');
+      var minutes = parts.length === 2 ? (+parts[0] * 60 + +parts[1]) : NaN;
+      var volume = Number(p.volume);
+      return { minutes: minutes, volume: volume, hasVolume: String(p.volume == null ? '' : p.volume).trim() !== '' };
+    }).filter(function (p) { return p.hasVolume && isFinite(p.minutes) && isFinite(p.volume) && p.volume >= 0; })
+      .sort(function (a, b) { return a.minutes - b.minutes; });
+    var L = Math.max(48, w * 0.095), R = Math.max(10, w * 0.025), T = Math.max(16, h * 0.07), B = Math.max(32, h * 0.14);
+    var pw = w - L - R, ph = h - T - B;
+    if (pw <= 0 || ph <= 0) return;
+    var first = valid.length ? valid[0].minutes : 8 * 60;
+    var last = valid.length ? valid[valid.length - 1].minutes : 16 * 60;
+    var minX = Math.max(0, Math.floor(first / 60) * 60 - 60);
+    var maxX = Math.min(24 * 60, Math.ceil(last / 60) * 60 + 60);
+    if (maxX <= minX) maxX = Math.min(24 * 60, minX + 120);
+    var maxV = valid.reduce(function (m, p) { return Math.max(m, p.volume); }, 0);
+    var rawStep = Math.max(1, maxV / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    var norm = rawStep / mag, nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+    var yStep = nice * mag, maxY = Math.max(yStep * 5, Math.ceil(maxV / yStep) * yStep);
+    x.save(); x.font = Math.max(9, Math.min(12, w / 65)) + 'px Arial'; x.lineWidth = 1;
+    x.strokeStyle = 'rgba(71,85,105,.38)'; x.fillStyle = '#334155'; x.setLineDash([2, 3]);
+    for (var yi = 0; yi <= 5; yi++) {
+      var yy = T + ph - ph * yi / 5;
+      x.beginPath(); x.moveTo(L, yy); x.lineTo(L + pw, yy); x.stroke();
+      x.textAlign = 'right'; x.textBaseline = 'middle'; x.fillText(String(Math.round(maxY * yi / 5 * 100) / 100), L - 5, yy);
+    }
+    var xStep = Math.max(60, Math.ceil((maxX - minX) / 6 / 60) * 60);
+    for (var xv = Math.ceil(minX / xStep) * xStep; xv <= maxX; xv += xStep) {
+      var xx = L + (xv - minX) / (maxX - minX) * pw;
+      x.beginPath(); x.moveTo(xx, T); x.lineTo(xx, T + ph); x.stroke();
+      x.textAlign = 'center'; x.textBaseline = 'top'; x.fillText(String(Math.floor(xv / 60)).padStart(2, '0') + ':00', xx, T + ph + 4);
+    }
+    x.setLineDash([]); x.strokeStyle = '#334155'; x.lineWidth = 1.5;
+    x.beginPath(); x.moveTo(L, T); x.lineTo(L, T + ph); x.lineTo(L + pw, T + ph); x.stroke();
+    x.textAlign = 'center'; x.textBaseline = 'bottom'; x.font = 'bold ' + Math.max(10, Math.min(13, w / 58)) + 'px Arial';
+    x.fillText('Jam', L + pw / 2, h - 1);
+    x.save(); x.translate(12, T + ph / 2); x.rotate(-Math.PI / 2); x.fillText('Volume (m³)', 0, 0); x.restore();
+    if (valid.length) {
+      x.strokeStyle = '#dc2626'; x.fillStyle = '#dc2626'; x.lineWidth = Math.max(2, w / 250);
+      x.beginPath();
+      valid.forEach(function (p, i) {
+        var px = L + (p.minutes - minX) / (maxX - minX) * pw;
+        var py = T + ph - p.volume / maxY * ph;
+        if (i) x.lineTo(px, py); else x.moveTo(px, py);
+      });
+      x.stroke();
+      valid.forEach(function (p) {
+        var px = L + (p.minutes - minX) / (maxX - minX) * pw;
+        var py = T + ph - p.volume / maxY * ph;
+        x.beginPath(); x.arc(px, py, Math.max(3, w / 180), 0, Math.PI * 2); x.fill();
+      });
+    }
+    x.restore();
+  }
   function render(cv, d, z, cssW, cssH, cb) {
     var x = cv.getContext('2d'), w = cv.width, h = cv.height, scale = w / z.w;
     function go(im) {
       x.clearRect(0, 0, w, h);
       if (im) { var r = Math.min(w / im.naturalWidth, h / im.naturalHeight), iw = im.naturalWidth * r, ih = im.naturalHeight * r;
                 x.drawImage(im, (w - iw) / 2, (h - ih) / 2, iw, ih); }
+      if (z.key === 'grafik') drawChart(x, d.chartPoints || [], w, h);
       d.strokes.forEach(function (st) {
         if (!st.t && st.lw == null) st = { c: st.c, p: st.p || st, lw: z.sig ? 1.9 : 1.5 };
         drawShape(x, st, w, h, scale);
@@ -1626,7 +1690,7 @@ var XLF = (function () {
     var z = SPEC[f].sheets[s].zones[i], d = S[f][s][i] || blankDraw(), cv = box.querySelector('canvas');
     if (cv.width !== Math.round(z.w * Math.max(2, window.devicePixelRatio || 1))) size(cv, z.w, z.h);
     render(cv, d, z, z.w, z.h);
-    box.classList.toggle('has', !!(d.strokes.length || d.img));
+    box.classList.toggle('has', z.key === 'grafik' || !!(d.strokes.length || d.img || (d.chartPoints && d.chartPoints.length)));
   }
   // menggambar dengan alat yang sedang dipilih
   function attachPad(cv, getD, z, dims, onEnd, onMove) {
@@ -1680,20 +1744,55 @@ var XLF = (function () {
   }
   function popup(f, s, i) {
     var z = SPEC[f].sheets[s].zones[i], d = JSON.parse(JSON.stringify(S[f][s][i] || blankDraw()));
+    var isChart = z.key === 'grafik';
+    if (isChart && !Array.isArray(d.chartPoints)) d.chartPoints = [];
     optOf(d, z);
-    var asp = z.h / z.w, W = Math.min(1100, window.innerWidth - 60), H = W * asp;
-    if (H > window.innerHeight - 200) { H = window.innerHeight - 200; W = H / asp; }
+    var asp = z.h / z.w, W, H;
+    function popupSize() {
+      W = Math.max(280, Math.min(1100, window.innerWidth - 60));
+      H = W * asp;
+      if (H > window.innerHeight - 200) { H = Math.max(180, window.innerHeight - 200); W = H / asp; }
+    }
+    popupSize();
     var ov = el('div', 'xpop');
-    ov.innerHTML = '<div class="box"><h3>' + (z.sig ? 'Tanda tangan — ' : 'Anotasi — ') + z.label + '</h3>' +
+    ov.innerHTML = '<div class="box' + (isChart ? ' chart-box' : '') + '"><h3>' + (z.sig ? 'Tanda tangan — ' : 'Anotasi — ') + z.label + '</h3>' +
       '<div class="xtools big">' + toolsHTML(z, true) + '</div><canvas></canvas>' +
+      (isChart ? '<div class="chart-editor"><table><thead><tr><th>No.</th><th>Jam (X)</th><th>Volume m³ (Y)</th><th></th></tr></thead><tbody></tbody></table><button type="button" class="chart-add">+ Tambah titik</button><small> Isi waktu dan volume tiap titik; grafik akan mengikuti data tersebut.</small></div>' : '') +
       '<div class="row"><button type="button" class="clr">Hapus semua</button>' +
       (z.sig ? '<button type="button" class="und">↶ Undo</button>' : '') + '<span style="flex:1"></span>' +
       '<button type="button" class="no">Batal</button><button type="button" class="ok">✓ Simpan</button></div></div>';
     document.body.appendChild(ov);
-    var cv = ov.querySelector('canvas'); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    var cv = ov.querySelector('canvas');
+    function resizePopup() {
+      popupSize();
+      cv.style.width = W + 'px'; cv.style.height = H + 'px';
+      size(cv, W, H);
+      paint();
+    }
+    cv.style.width = W + 'px'; cv.style.height = H + 'px';
     size(cv, W, H);
     // tebal garis di pop-up mengikuti skala, jadi hasilnya sama dengan di kotak kecil
     function paint() { render(cv, d, z, W, H); }
+    if (isChart) {
+      var body = ov.querySelector('.chart-editor tbody');
+      function drawRows() {
+        body.innerHTML = '';
+        d.chartPoints.forEach(function (p, n) {
+          var tr = document.createElement('tr');
+          tr.innerHTML = '<td>' + (n + 1) + '</td><td><input type="time" value="' + xesc(p.time || '') + '" data-field="time"></td><td><input type="number" min="0" step="any" value="' + xesc(p.volume == null ? '' : p.volume) + '" data-field="volume"></td><td><button type="button" data-remove="' + n + '">Hapus</button></td>';
+          body.appendChild(tr);
+        });
+        body.querySelectorAll('input').forEach(function (input) { input.addEventListener('input', function () {
+          var row = input.closest('tr'), index = Array.prototype.indexOf.call(body.children, row);
+          d.chartPoints[index][input.dataset.field] = input.value; paint();
+        }); });
+        body.querySelectorAll('[data-remove]').forEach(function (button) { button.addEventListener('click', function () {
+          d.chartPoints.splice(+button.dataset.remove, 1); drawRows(); paint();
+        }); });
+      }
+      ov.querySelector('.chart-add').onclick = function () { d.chartPoints.push({ time: '', volume: '' }); drawRows(); };
+      drawRows();
+    }
     paint();
     attachPad(cv, function () { return d; }, z, null, paint, paint);
     var tl = ov.querySelector('.xtools');
@@ -1704,10 +1803,16 @@ var XLF = (function () {
       });
       paintTools(tl, d, z);
     }
-    ov.querySelector('.clr').onclick = function () { d.strokes = []; d.img = null; paint(); };
+    ov.querySelector('.clr').onclick = function () {
+      d.strokes = []; d.img = null;
+      if (isChart) { d.chartPoints = []; ov.querySelector('.chart-editor tbody').innerHTML = ''; }
+      paint();
+    };
     var u = ov.querySelector('.und'); if (u) u.onclick = function () { if (cv.undoLast) cv.undoLast(); paint(); };
-    ov.querySelector('.no').onclick = function () { ov.remove(); };
-    ov.querySelector('.ok').onclick = function () { S[f][s][i] = d; ov.remove(); drawPaint(f, s, i);
+    window.addEventListener('resize', resizePopup);
+    function closePopup() { window.removeEventListener('resize', resizePopup); ov.remove(); }
+    ov.querySelector('.no').onclick = closePopup;
+    ov.querySelector('.ok').onclick = function () { S[f][s][i] = d; closePopup(); drawPaint(f, s, i);
       var bx = document.getElementById(zid(f, s, i)); if (bx) paintTools(bx.querySelector('.xtools'), d, z); save(); };
   }
   function pickImgInto(cb) {
@@ -1763,7 +1868,7 @@ var XLF = (function () {
     var st = S[f] && S[f][s]; if (!st) return false;
     return SPEC[f].sheets[s].zones.some(function (z, i) {
       var v = st[i]; if (v == null) return false;
-      if (z.type === 'draw') return !!(v.strokes && v.strokes.length || v.img);
+      if (z.type === 'draw') return !!(v.strokes && v.strokes.length || v.img || (v.chartPoints && v.chartPoints.length));
       if (z.type === 'pre') return String(v).trim() !== String(z.init).trim();
       return String(v).trim() !== '';
     });
@@ -1870,7 +1975,7 @@ var XLF = (function () {
         var v = z.share ? SHARE[f][z.share] : S[f][s][i];
         if (z.type === 'draw') {
           if (z.sig && v && v.label != null) { var lr = colName(z.c1) + Math.max(1, z.r1 - 1); x = setCell(x, lr, plainIS(String(v.label)), styleOf(x, lr)); }
-          if (v && (v.strokes.length || v.img)) pics.push([z, v]); return;
+          if (v && (v.strokes.length || v.img || (v.chartPoints && v.chartPoints.length))) pics.push([z, v]); return;
         }
         if (v == null) return;
         v = String(v).replace(/\s+$/, '');
@@ -1980,6 +2085,103 @@ function resetAll() {
   apply({ app: 'QP-006-08a', f: {}, result: '', opts: [], dist: [], sig: {} });
   XLF.reset();
 }
+function xmlAttr(tag, name) {
+  var m = tag.match(new RegExp('\\b' + name + '\\s*=\\s*"([^"]*)"'));
+  return m ? m[1] : '';
+}
+function xmlEscape(v) {
+  return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function zipPath(base, target) {
+  var parts = (target.charAt(0) === '/' ? target.slice(1) : base + '/' + target).split('/'), out = [];
+  parts.forEach(function (p) { if (!p || p === '.') return; if (p === '..') out.pop(); else out.push(p); });
+  return out.join('/');
+}
+function fileName(path) { return path.slice(path.lastIndexOf('/') + 1); }
+async function mergeExcelWorkbooks(results) {
+  var base = await JSZip.loadAsync(await results[0].blob.arrayBuffer());
+  var workbook = await base.file('xl/workbook.xml').async('string');
+  var workbookRels = await base.file('xl/_rels/workbook.xml.rels').async('string');
+  var contentTypes = await base.file('[Content_Types].xml').async('string');
+  var sheetId = 1, sheetNo = 1, relNo = 1, drawingNo = 1, imageNo = 1;
+  var m;
+  m = workbook.match(/<sheet[^>]*\bsheetId="(\d+)"/g);
+  if (m) sheetId = Math.max.apply(null, m.map(function (v) { return +v.match(/sheetId="(\d+)"/)[1]; })) + 1;
+  while (base.file('xl/worksheets/sheet' + sheetNo + '.xml')) sheetNo++;
+  m = workbookRels.match(/Id="rId(\d+)"/g);
+  if (m) relNo = Math.max.apply(null, m.map(function (v) { return +v.match(/rId(\d+)/)[1]; })) + 1;
+  while (base.file('xl/drawings/drawing' + drawingNo + '.xml')) drawingNo++;
+  var sourceLabels = ['QP-006-06(c)', 'QP-006-08(d)'];
+  for (var fi = 1; fi < results.length; fi++) {
+    var src = await JSZip.loadAsync(await results[fi].blob.arrayBuffer());
+    var swb = await src.file('xl/workbook.xml').async('string');
+    var swr = await src.file('xl/_rels/workbook.xml.rels').async('string');
+    var sheets = swb.match(/<sheet\b[^>]*\/?>(?:<\/sheet>)?/g) || [];
+    for (var si = 0; si < sheets.length; si++) {
+      var sn = sheets[si], oldRid = xmlAttr(sn, 'r:id'), oldName = xmlAttr(sn, 'name');
+      var wr = (swr.match(new RegExp('<Relationship[^>]*\\bId="' + oldRid + '"[^>]*/?>')) || [])[0];
+      if (!wr) continue;
+      var oldSheetPath = zipPath('xl', xmlAttr(wr, 'Target'));
+      var oldSheet = src.file(oldSheetPath);
+      if (!oldSheet) continue;
+      var newSheetPath = 'xl/worksheets/sheet' + sheetNo++ + '.xml';
+      base.file(newSheetPath, await oldSheet.async('uint8array'));
+      var newSheetRelsPath = 'xl/worksheets/_rels/' + fileName(newSheetPath) + '.rels';
+      var oldSheetRelsPath = 'xl/worksheets/_rels/' + fileName(oldSheetPath) + '.rels';
+      var sourceSheetRels = src.file(oldSheetRelsPath);
+      if (sourceSheetRels) {
+        var sr = await sourceSheetRels.async('string');
+        var drawings = [];
+        sr = sr.replace(/<Relationship\b[^>]*\/?>(?:<\/Relationship>)?/g, function (rel) {
+          var target = xmlAttr(rel, 'Target');
+          if (!target || xmlAttr(rel, 'TargetMode') === 'External') return rel;
+          var oldTargetPath = zipPath(oldSheetPath.slice(0, oldSheetPath.lastIndexOf('/')), target);
+          if (/drawing/i.test(xmlAttr(rel, 'Type'))) {
+            var newDrawingPath = 'xl/drawings/drawing' + drawingNo++ + '.xml';
+            drawings.push({ oldPath: oldTargetPath, newPath: newDrawingPath });
+            return rel.replace(/Target="[^"]*"/, 'Target="../drawings/' + fileName(newDrawingPath) + '"');
+          }
+          return rel;
+        });
+        base.file(newSheetRelsPath, sr);
+        for (var di = 0; di < drawings.length; di++) {
+          var dr = drawings[di], drawing = src.file(dr.oldPath);
+          if (!drawing) continue;
+          base.file(dr.newPath, await drawing.async('uint8array'));
+          contentTypes = contentTypes.replace('</Types>', '<Override PartName="/' + dr.newPath + '" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
+          var oldDrawingRelsPath = 'xl/drawings/_rels/' + fileName(dr.oldPath) + '.rels';
+          var drawingRels = src.file(oldDrawingRelsPath);
+          if (!drawingRels) continue;
+          var drs = await drawingRels.async('string');
+          drs = drs.replace(/<Relationship\b[^>]*\/?>(?:<\/Relationship>)?/g, function (rel) {
+            var target = xmlAttr(rel, 'Target');
+            if (!target || xmlAttr(rel, 'TargetMode') === 'External' || !/image/i.test(xmlAttr(rel, 'Type'))) return rel;
+            var oldMediaPath = zipPath(dr.oldPath.slice(0, dr.oldPath.lastIndexOf('/')), target);
+            var media = src.file(oldMediaPath);
+            if (!media) return rel;
+            var newMediaPath = 'xl/media/xlf_merge_' + imageNo++ + '_' + fileName(oldMediaPath);
+            base.file(newMediaPath, media.async('uint8array'));
+            return rel.replace(/Target="[^"]*"/, 'Target="../media/' + fileName(newMediaPath) + '"');
+          });
+          var newDrawingRelsPath = 'xl/drawings/_rels/' + fileName(dr.newPath) + '.rels';
+          base.file(newDrawingRelsPath, drs);
+        }
+      }
+      var label = sourceLabels[fi - 1] + (oldName ? ' - ' + oldName : '');
+      label = label.slice(0, 31);
+      var unique = label, suffix = 2;
+      while (workbook.indexOf('name="' + xmlEscape(unique) + '"') >= 0) unique = (label.slice(0, 27) + ' (' + suffix++ + ')').slice(0, 31);
+      var newRid = 'rId' + relNo++;
+      workbook = workbook.replace('</sheets>', '<sheet name="' + xmlEscape(unique) + '" sheetId="' + sheetId++ + '" r:id="' + newRid + '"/></sheets>');
+      workbookRels = workbookRels.replace('</Relationships>', '<Relationship Id="' + newRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/' + fileName(newSheetPath) + '"/></Relationships>');
+      contentTypes = contentTypes.replace('</Types>', '<Override PartName="/' + newSheetPath + '" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
+    }
+  }
+  base.file('xl/workbook.xml', workbook);
+  base.file('xl/_rels/workbook.xml.rels', workbookRels);
+  base.file('[Content_Types].xml', contentTypes);
+  return await base.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', compression: 'DEFLATE' });
+}
 async function dl1(k) {
   try {
     if (k === 'a') { await exportExcel(); return; }
@@ -1988,9 +2190,19 @@ async function dl1(k) {
   } catch (e) { alert('Gagal membuat Excel:\n' + e.message); }
 }
 async function dlAll() {
-  await dl1('a');
-  await new Promise(function (r) { setTimeout(r, 600); }); await dl1('c');
-  await new Promise(function (r) { setTimeout(r, 600); }); await dl1('d');
+  try {
+    msg('Menyusun satu workbook Excelâ€¦');
+    var a = await exportExcel(false);
+    if (!a) throw new Error('Form QP-006-08(a) gagal dibuat.');
+    var c = await XLF.exportForm('c');
+    var d = await XLF.exportForm('d');
+    var blob = await mergeExcelWorkbooks([a, c, d]);
+    var tgl = new Date().toISOString().slice(0, 10);
+    download(blob, 'Paket Pengecoran QP-006-08 ' + tgl + '.xlsx');
+    msg('Satu workbook Excel dibuat.');
+  } catch (e) {
+    alert('Gagal membuat workbook Excel:\n' + e.message);
+  }
 }
 function howtoOpen() { document.getElementById('howtoModal').classList.add('on'); }
 function howtoClose() { document.getElementById('howtoModal').classList.remove('on'); }
@@ -3605,6 +3817,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
     activeSid = nextBlock ? nextBlock.dataset.sid : null;
 
     getItems(sid).forEach(c => delete storeData[c.dataset.id]);
+    if (typeof sheetSignatures !== 'undefined') delete sheetSignatures[sid];
     document.getElementById(`sheet-${sid}`).remove();
     renumberSheets();
     scheduleSave();
@@ -6114,6 +6327,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
     document.getElementById('sheetsContainer').innerHTML = '';
     Object.keys(storeData).forEach(k => delete storeData[k]);
     itemCount = 0; sheetCount = 0;
+    if (typeof sheetSignatures !== 'undefined') Object.keys(sheetSignatures).forEach(k => delete sheetSignatures[k]);
 
     (draft.sheets || []).forEach(sh => {
       const sid = addSheet(
@@ -11805,6 +12019,57 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
     .items-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     @media (max-width: 1000px) { .items-container { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 680px)  { .items-container { grid-template-columns: 1fr; } }
+
+    /* Tampilan Classic mengikuti enam kotak foto pada form resmi QP-006-05(b).
+       Data, upload, anotasi, dan ekspor tetap memakai mesin New yang sama. */
+    .layout-switch { display:flex; align-items:center; gap:9px; width:max-content; margin:0 0 14px 0; padding:6px 10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:20px; color:#475569; font-size:11px; font-weight:700; }
+    .layout-switch .mode-label { min-width:42px; }
+    .layout-switch input { position:absolute; opacity:0; pointer-events:none; }
+    .layout-switch .track { width:42px; height:22px; padding:2px; border-radius:20px; background:#94a3b8; cursor:pointer; transition:background-color .36s cubic-bezier(.22,1,.36,1), box-shadow .36s cubic-bezier(.22,1,.36,1); }
+    .layout-switch .track::after { content:''; display:block; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .36s cubic-bezier(.22,1,.36,1), box-shadow .36s cubic-bezier(.22,1,.36,1); will-change:transform; }
+    .layout-switch input:checked + .track { background:#047857; box-shadow:0 0 0 2px rgba(4,120,87,.12); }
+    .layout-switch input:checked + .track::after { transform:translateX(20px); box-shadow:0 2px 5px rgba(0,0,0,.28); }
+    .layout-switch .mode-hint { color:#64748b; font-weight:600; }
+    .container.piling-classic .items-container { grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; border:2px solid #111; background:#fff; }
+    .container.piling-classic .card-item { margin:0; padding:0; border:1px solid #111; border-radius:0; box-shadow:none; background:#fff; }
+    .container.piling-classic .card-toolbar { margin:0; padding:5px 7px; background:#e2efda; border-bottom:1px solid #111; }
+    .container.piling-classic .item-label { color:#1f3d1f; font-size:10px; text-align:center; flex:1; }
+    .container.piling-classic .item-tools { display:none; }
+    .container.piling-classic .ftbl { border:0; }
+    .container.piling-classic .ft-h { display:none; }
+    .container.piling-classic .ft-b { padding:0; }
+    .container.piling-classic .drop-box { min-height:220px; margin:0; border:0; border-radius:0; background:#fff; }
+    .container.piling-classic .preview-img { max-height:205px; }
+    .container.piling-classic .ft-caplbl { display:none; }
+    .container.piling-classic .ft-cap { border:0; border-top:1px solid #111; border-radius:0; background:#e2efda; padding:7px 6px; font-size:10px; color:#1f3d1f; }
+    .container.piling-classic .page-divider { grid-column:1 / -1; border-top:2px dashed #b45309; margin:0; padding:6px; background:#fffbeb; }
+    @media (max-width: 680px) { .container.piling-classic .items-container { grid-template-columns:1fr; } }
+    /* Classic memakai dokumen utuh dari referensi 2-in-1: halaman 1 = (a),
+       halaman 2 = (b), termasuk template Excel resminya. */
+    .classic-mode-host { display:none; width:100%; height:calc(100vh - 100px); min-height:720px; overflow:hidden; background:#fff; }
+    .classic-mode-host iframe { display:block; width:100%; height:100%; min-height:720px; border:0; background:#fff; }
+    .container.piling-classic { max-width:none; margin:0; padding:0; border-radius:0; box-shadow:none; background:transparent; background-image:none; }
+    .container.piling-classic > .brand-header { display:block; border:0; padding:0; margin:0; }
+    .container.piling-classic > .brand-header > :not(.layout-switch):not(#classicModeHost) { display:none; }
+    .container.piling-classic #classicModeHost { display:block; }
+    .container.piling-classic > :not(.brand-header) { display:none !important; }
+    .piling-sigbox { margin-top:6px; }
+    .piling-sig { position:relative; height:76px; border:1px dashed #94a3b8; border-radius:5px; background:#f8fbff; overflow:hidden; cursor:crosshair; }
+    .piling-sig canvas { display:block; width:100%; height:100%; touch-action:none; }
+    .piling-sig .piling-sighint { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:11px; pointer-events:none; }
+    .piling-sig.has .piling-sighint { display:none; }
+    .piling-sigtools { position:absolute; right:3px; bottom:3px; display:flex; gap:3px; opacity:0; transition:opacity .12s; }
+    .piling-sig:hover .piling-sigtools, .piling-sig:focus-within .piling-sigtools { opacity:1; }
+    .piling-sigtools button { border:1px solid #cbd5e1; border-radius:4px; background:#fff; color:#334155; padding:2px 6px; font-size:10px; cursor:pointer; }
+    .piling-sigpop { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(15,23,42,.62); }
+    .piling-sigpop .piling-sigbox-inner { width:min(920px,100%); background:#fff; border-radius:10px; padding:14px; box-shadow:0 14px 44px rgba(0,0,0,.35); }
+    .piling-sigpop h3 { margin:0 0 8px; font-size:14px; }
+    .piling-sigpop canvas { display:block; width:100%; height:min(260px,38vh); border:1px dashed #94a3b8; background:#f8fbff; touch-action:none; cursor:crosshair; }
+    .piling-sigpop .piling-sigrow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .piling-sigpop button { border:0; border-radius:6px; padding:7px 11px; background:#e2e8f0; color:#334155; font-weight:600; cursor:pointer; }
+    .piling-sigpop button.active { background:#f59e0b; color:#fff; }
+    .piling-sigpop button.ok { background:#16a34a; color:#fff; }
+    .piling-sigpop button.danger { background:#fee2e2; color:#b91c1c; }
     /* Penanda batas halaman cetak: tiap 6 foto pindah halaman baru */
     .page-divider { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin: 8px 0 2px 0; color: #b45309; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
     .page-divider::before, .page-divider::after { content: ''; flex: 1; height: 0; border-top: 2px dashed #fbbf24; }
@@ -12118,6 +12383,18 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       <img id="headerLogoPrev" alt="PT. Jaya Obayashi Logo">
       <button style="font-size:11px; cursor:pointer;" onclick="document.getElementById('logoFileInput').click()">Ganti Logo Footer</button>
       <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="changeLogo(event)">
+    </div>
+    <div class="layout-switch" title="Ubah susunan enam kotak foto tanpa mengubah data atau format Excel">
+      <span>Mode tampilan</span>
+      <label>
+        <input type="checkbox" id="pilingLayoutToggle" onchange="togglePilingLayout(this.checked)">
+        <span class="track" aria-hidden="true"></span>
+      </label>
+      <span class="mode-label" id="pilingLayoutMode">New</span>
+      <span class="mode-hint">Classic / New</span>
+    </div>
+    <div id="classicModeHost" class="classic-mode-host">
+      <iframe src="qp00605-classic.html" title="QP-006-05 (a) dan QP-006-05 (b) Classic"></iframe>
     </div>
     <h2>Laporan Kerja Piling (PC Pile)
       <span class="brand-formno">Form No. QP-006-05 (b)</span>
@@ -12629,6 +12906,26 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   ];
   const DEFAULT_TITLE = 'PROSES PEKERJAAN PILING ( PC PILE )';
 
+  // Classic = enam kotak foto seperti form resmi dari HTML referensi.
+  // New = kartu editor yang sudah ada. Keduanya membaca data yang sama,
+  // sehingga mengganti mode tidak menggandakan foto atau mengubah ekspor.
+  let pilingLayoutMode = 'new';
+  function applyPilingLayout(mode, remember = true) {
+    pilingLayoutMode = mode === 'classic' ? 'classic' : 'new';
+    const root = document.querySelector('.container');
+    if (root) root.classList.toggle('piling-classic', pilingLayoutMode === 'classic');
+    const toggle = document.getElementById('pilingLayoutToggle');
+    if (toggle) toggle.checked = pilingLayoutMode === 'classic';
+    const label = document.getElementById('pilingLayoutMode');
+    if (label) label.textContent = pilingLayoutMode === 'classic' ? 'Classic' : 'New';
+    if (remember) {
+      try { localStorage.setItem('qcPiling_layoutMode', pilingLayoutMode); } catch (e) {}
+    }
+  }
+  function togglePilingLayout(isClassic) {
+    applyPilingLayout(isClassic ? 'classic' : 'new');
+  }
+
   // 6 foto per halaman cetak (2 kolom x 3 baris), sama seperti form aslinya.
   // Angka ini dipakai bersama oleh penanda halaman, preview, dan exportToExcel.
   const ITEMS_PER_PAGE = 6;
@@ -12761,6 +13058,40 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   // ================= HELPER SHEET =================
   let sheetCount = 0;
   let activeSid = null;
+  const sheetSignatures = {};
+  const pilingSigClone = strokes => (strokes || []).map(s => ({ col: s.col || '#111827', lw: Number(s.lw) || 2.5, p: (s.p || []).map(x => [Number(x[0]) || 0, Number(x[1]) || 0]) }));
+  function pilingSigDraw(canvas, strokes) {
+    const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    (strokes || []).forEach(s => { if (!s.p || s.p.length < 2) return; ctx.beginPath(); ctx.strokeStyle = s.col || '#111827'; ctx.lineWidth = (Number(s.lw) || 2.5) * (canvas.width / 400); ctx.moveTo(s.p[0][0] * canvas.width, s.p[0][1] * canvas.height); s.p.slice(1).forEach(q => ctx.lineTo(q[0] * canvas.width, q[1] * canvas.height)); ctx.stroke(); });
+  }
+  function pilingSigSize(canvas) { const r = canvas.getBoundingClientRect(), d = Math.max(1, window.devicePixelRatio || 1); canvas.width = Math.max(1, Math.round(r.width * d)); canvas.height = Math.max(1, Math.round(r.height * d)); }
+  function pilingSigRedraw(sid, slot) { const box = document.getElementById(`piling-sig-${slot}-${sid}`), cv = box && box.querySelector('canvas'); if (!cv) return; pilingSigSize(cv); pilingSigDraw(cv, sheetSignatures[sid]?.[slot] || []); box.classList.toggle('has', !!(sheetSignatures[sid]?.[slot] || []).length); }
+  function pilingSigBind(sid, slot, canvas, state) {
+    let current = null, moved = false;
+    const point = e => { const r = canvas.getBoundingClientRect(); return [Math.max(0, Math.min(1, (e.clientX-r.left)/r.width)), Math.max(0, Math.min(1, (e.clientY-r.top)/r.height))]; };
+    canvas.addEventListener('pointerdown', e => { e.preventDefault(); canvas.setPointerCapture(e.pointerId); moved = false; current = { col: state.col, lw: state.lw, p: [point(e)] }; state.temp.push(current); pilingSigDraw(canvas, state.temp); });
+    canvas.addEventListener('pointermove', e => { if (!current) return; e.preventDefault(); moved = true; current.p.push(point(e)); pilingSigDraw(canvas, state.temp); });
+    const end = () => { if (!current) return; current = null; state.undo.push(pilingSigClone(state.temp)); state.undo = state.undo.slice(-30); };
+    canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
+    canvas.addEventListener('click', () => { if (!moved) pilingSigPopup(sid, slot); });
+  }
+  function pilingSigPNG(strokes) { const cv = document.createElement('canvas'); cv.width = 800; cv.height = 160; pilingSigDraw(cv, strokes); return cv.toDataURL('image/png'); }
+  function pilingSigPopup(sid, slot) {
+    const original = pilingSigClone(sheetSignatures[sid]?.[slot] || []), state = { temp: pilingSigClone(original), undo: [], col:'#111827', lw:2.5, eraser:false };
+    const pop = document.createElement('div'); pop.className = 'piling-sigpop'; pop.innerHTML = `<div class="piling-sigbox-inner"><h3>Tanda tangan ${slot} — klik atau gambar langsung</h3><canvas></canvas><div class="piling-sigrow"><label>Warna <input class="sigcol" type="color" value="#111827"></label><label>Ketebalan <input class="siglw" type="range" min="1" max="8" step="0.5" value="2.5"></label><button class="sigerase">Mode hapus</button><button class="sigundo">Undo</button><button class="sigclear danger">Hapus semua</button><span style="flex:1"></span><button class="sigcancel">Batal</button><button class="sigsave ok">Simpan</button></div></div>`;
+    document.body.appendChild(pop); const cv = pop.querySelector('canvas'); pilingSigSize(cv); pilingSigDraw(cv, state.temp);
+    const redraw = () => pilingSigDraw(cv, state.temp);
+    pop.querySelector('.sigcol').oninput = e => state.col = e.target.value;
+    pop.querySelector('.siglw').oninput = e => state.lw = Number(e.target.value);
+    pop.querySelector('.sigerase').onclick = e => { state.eraser = !state.eraser; e.currentTarget.classList.toggle('active', state.eraser); };
+    pop.querySelector('.sigundo').onclick = () => { const prev = state.undo.pop(); if (prev) { state.temp = prev; redraw(); } };
+    pop.querySelector('.sigclear').onclick = () => { state.undo.push(pilingSigClone(state.temp)); state.temp = []; redraw(); };
+    pop.querySelector('.sigcancel').onclick = () => pop.remove();
+    pop.querySelector('.sigsave').onclick = () => { sheetSignatures[sid][slot] = pilingSigClone(state.temp); pop.remove(); pilingSigRedraw(sid, slot); scheduleSave(); };
+    pilingSigBindPopup(cv, state);
+  }
+  function pilingSigBindPopup(canvas, state) { let cur=null; const pt=e=>{const r=canvas.getBoundingClientRect();return [Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))]}; canvas.addEventListener('pointerdown',e=>{e.preventDefault();canvas.setPointerCapture(e.pointerId);cur={col:state.eraser?'#f8fbff':state.col,lw:state.eraser?state.lw*4:state.lw,p:[pt(e)]};state.temp.push(cur);pilingSigDraw(canvas,state.temp)}); canvas.addEventListener('pointermove',e=>{if(!cur)return;e.preventDefault();cur.p.push(pt(e));pilingSigDraw(canvas,state.temp)}); const end=()=>{if(cur){state.undo.push(pilingSigClone(state.temp));state.undo=state.undo.slice(-30);cur=null}}; canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end); }
   function getSheets() { return Array.from(document.querySelectorAll('.sheet-block')); }
   function getItems(sid) {
     const c = document.getElementById(`items-${sid}`);
@@ -12872,16 +13203,19 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
             <div class="form-group">
               <label>Label 1</label>
               <input type="text" id="ssign1-${sid}" value="${esc(sign1)}" maxlength="20">
+              <div class="piling-sigbox"><div class="piling-sig" id="piling-sig-1-${sid}"><canvas></canvas><span class="piling-sighint">✍ tanda tangan di sini · klik untuk perbesar</span><div class="piling-sigtools"><button type="button" onclick="pilingSigPopup(${sid},1)">Perbesar</button><button type="button" onclick="sheetSignatures[${sid}][1].length=0; pilingSigRedraw(${sid},1); scheduleSave();">✕</button></div></div></div>
               <input type="text" id="sname1-${sid}" value="${esc(nm1)}" placeholder="Nama" style="margin-top:5px;">
             </div>
             <div class="form-group">
               <label>Label 2</label>
               <input type="text" id="ssign2-${sid}" value="${esc(sign2)}" maxlength="20">
+              <div class="piling-sigbox"><div class="piling-sig" id="piling-sig-2-${sid}"><canvas></canvas><span class="piling-sighint">✍ tanda tangan di sini · klik untuk perbesar</span><div class="piling-sigtools"><button type="button" onclick="pilingSigPopup(${sid},2)">Perbesar</button><button type="button" onclick="sheetSignatures[${sid}][2].length=0; pilingSigRedraw(${sid},2); scheduleSave();">✕</button></div></div></div>
               <input type="text" id="sname2-${sid}" value="${esc(nm2)}" placeholder="Nama" style="margin-top:5px;">
             </div>
             <div class="form-group">
               <label>Label 3</label>
               <input type="text" id="ssign3-${sid}" value="${esc(sign3)}" maxlength="20">
+              <div class="piling-sigbox"><div class="piling-sig" id="piling-sig-3-${sid}"><canvas></canvas><span class="piling-sighint">✍ tanda tangan di sini · klik untuk perbesar</span><div class="piling-sigtools"><button type="button" onclick="pilingSigPopup(${sid},3)">Perbesar</button><button type="button" onclick="sheetSignatures[${sid}][3].length=0; pilingSigRedraw(${sid},3); scheduleSave();">✕</button></div></div></div>
               <input type="text" id="sname3-${sid}" value="${esc(nm3)}" placeholder="Nama" style="margin-top:5px;">
             </div>
           </div>
@@ -12905,6 +13239,14 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       </div>
     `;
     document.getElementById('sheetsContainer').insertAdjacentHTML('beforeend', html);
+
+    sheetSignatures[sid] = { 1: pilingSigClone(preset.sigs?.[1]), 2: pilingSigClone(preset.sigs?.[2]), 3: pilingSigClone(preset.sigs?.[3]) };
+    [1, 2, 3].forEach(slot => {
+      const box = document.getElementById(`piling-sig-${slot}-${sid}`), cv = box && box.querySelector('canvas');
+      if (!cv) return;
+      const state = { temp: sheetSignatures[sid][slot], undo: [], col:'#111827', lw:2.5 };
+      pilingSigBind(sid, slot, cv, state); pilingSigRedraw(sid, slot);
+    });
 
     const bz = document.getElementById(`bulkZone-${sid}`);
     ['dragenter', 'dragover'].forEach(evt => bz.addEventListener(evt, e => { e.preventDefault(); bz.classList.add('dragover'); }));
@@ -15109,6 +15451,7 @@ function annRotateCurrent(delta) {
         title: val(`stitle-${sid}`),
         sign1: val(`ssign1-${sid}`), sign2: val(`ssign2-${sid}`), sign3: val(`ssign3-${sid}`),
         nm1: val(`sname1-${sid}`), nm2: val(`sname2-${sid}`), nm3: val(`sname3-${sid}`),
+        sigs: { 1: pilingSigClone(sheetSignatures[sid]?.[1]), 2: pilingSigClone(sheetSignatures[sid]?.[2]), 3: pilingSigClone(sheetSignatures[sid]?.[3]) },
         items
       };
     });
@@ -15147,7 +15490,7 @@ function annRotateCurrent(delta) {
         name: sh.name, project: sh.project, date: sh.date, inspector: sh.inspector,
         title: sh.title,
         sign1: sh.sign1, sign2: sh.sign2, sign3: sh.sign3,
-        nm1: sh.nm1, nm2: sh.nm2, nm3: sh.nm3
+        nm1: sh.nm1, nm2: sh.nm2, nm3: sh.nm3, sigs: sh.sigs
       }, { noItems: true, silent: true, keepActive: true });
 
       (sh.items || []).forEach(it => {
@@ -15681,6 +16024,11 @@ function annRotateCurrent(delta) {
           [19, 20, 21].forEach((c, i) => {
             put(top, c, top, c, signs[i], { align: { horizontal: 'center' }, font: F.ttdLbl });
             put(top + 1, c, top + 4, c, '');
+            const sig = sheetSignatures[sid]?.[i + 1] || [];
+            if (sig.length) {
+              const sigId = wb.addImage({ base64: pilingSigPNG(sig), extension: 'png' });
+              placeImage(sigId, c, c, top + 1, top + 4, 1, 1, 1, true, 1);
+            }
             put(top + 5, c, end, c, names[i] || 'Name', { align: { horizontal: 'center' }, font: F.ttdNm });
           });
 
@@ -15853,6 +16201,7 @@ function annRotateCurrent(delta) {
   addSheet({}, { silent: true });
   checkDraftOnLoad();
 
+  applyPilingLayout((() => { try { return localStorage.getItem('qcPiling_layoutMode') || 'new'; } catch (e) { return 'new'; } })(), false);
   // Panduan muncul otomatis HANYA saat pertama kali dipakai di browser ini.
   try {
     if (!localStorage.getItem(TUTORIAL_SEEN_KEY)) setTimeout(openTutorial, 600);
@@ -27625,7 +27974,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           <tr><td><b>QP-006-02 (c)</b><br>Photo Record</td><td>Dokumentasi foto hasil pekerjaan beserta catatannya, per area dan per jenis pekerjaan.</td><td>Excel &middot; portrait</td></tr>
           <tr><td><b>QP-006-05 (b)</b><br>Laporan Piling</td><td>Dokumentasi enam tahapan proses pekerjaan PC Pile dalam satu halaman.</td><td>Excel &middot; portrait</td></tr>
           <tr><td><b>QP-006-06 (a)</b><br>Rebar Delivery</td><td>Penerimaan besi tulangan: tabel data per nomor heat, disusul foto bukti surat jalan, mill sheet, spesifikasi, dan tagging.</td><td>Excel &middot; landscape</td></tr>
-          <tr><td><b>QP-006-08 (a), QP-006-06 (c), QP-006-08 (d)</b><br>Pengecoran 3-in-1</td><td>Pemeriksaan sebelum cor, checklist inspeksi besi, dan laporan kerja pengecoran dalam satu paket.</td><td>3 file Excel</td></tr>
+          <tr><td><b>QP-006-08 (a), QP-006-06 (c), QP-006-08 (d)</b><br>Pengecoran 3-in-1</td><td>Pemeriksaan sebelum cor, checklist inspeksi besi, dan laporan kerja pengecoran dalam satu paket.</td><td>1 workbook Excel · 3 sheet</td></tr>
           <tr><td><b>Gantt Generator</b></td><td>Menyusun jadwal proyek: batang jadwal, kelompok pekerjaan, dan ketergantungan antar kegiatan.</td><td>Excel &middot; PDF</td></tr>
         </table>
 
