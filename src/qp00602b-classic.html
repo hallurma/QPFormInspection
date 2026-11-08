@@ -62,6 +62,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .xd.xann:not(.has):not(:hover):not(.act) .xtools .tgrp:not(:last-child) { display: none; }
   .xd.xsig { cursor: pointer; } .xd.xsig canvas { pointer-events: none; }
   .xd.xsig .xtools { display: none !important; }
+  .xd.xann canvas { pointer-events: none; }
+  .xd.xann .xtools .tgrp:not(:last-child) { display:none !important; }
   .xd.xann:not(.has-photo) .xtools { display: none !important; }
   .xpop .crop-canvas { touch-action: none; cursor: crosshair; }
   .xpop .crop-stage { max-width: min(1100px, 88vw); max-height: 65vh; overflow: auto; }
@@ -256,6 +258,17 @@ var XLF = (function () {
       '<span class="tgrp"><button type="button" data-a="rotL" title="Putar foto ke kiri">↺</button><button type="button" data-a="rotR" title="Putar foto ke kanan">↻</button><button type="button" data-a="crop" title="Potong foto">Crop</button><button type="button" data-a="img">Foto</button><button type="button" data-a="undo">Undo</button>' +
       (big ? '' : '<button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button>') + '</span>';
   }
+  function toolsHTML(z, big) {
+    if (z.sig) return '<span class="tgrp">' + TOOLS.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '<button type="button" class="tl" data-t="eraser">Penghapus</button></span>' +
+      '<span class="tgrp"><label class="spec"><input type="color" data-a="col"></label><label class="lwl">≡<input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label></span>' +
+      (big ? '' : '<button type="button" data-a="undo">Undo</button><button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button>');
+    if (!big) return '<span class="tgrp"><button type="button" data-a="img">Foto</button><button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button></span>';
+    var editTools = TOOLS.concat([['eraser','⌫','Penghapus']]);
+    return '<span class="tgrp">' + editTools.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '" title="' + (t[2] || 'Penghapus') + '">' + t[1] + '</button>'; }).join('') + '</span>' +
+      '<span class="tgrp">' + SW.map(function (c) { return '<button type="button" class="sw" data-c="' + c + '" style="background:' + c + '"></button>'; }).join('') + '<label class="spec"><input type="color" data-a="col"></label></span>' +
+      '<span class="tgrp"><label class="lwl">≡<input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label><button type="button" class="dsh" data-a="dash">Putus-putus</button></span>' +
+      '<span class="tgrp"><button type="button" data-a="rotL">↺</button><button type="button" data-a="rotR">↻</button><button type="button" data-a="crop">Crop</button><button type="button" data-a="img">Foto</button><button type="button" data-a="undo">Undo</button><button type="button" data-a="clr">Hapus</button></span>';
+  }
   function paintTools(root, d, z) {
     if (!root) return;
     var o = optOf(d, z);
@@ -314,7 +327,9 @@ var XLF = (function () {
       if (!e.target.closest('.xtools')) popup(k, i);
     });
     if (!z.sig) box.addEventListener('click', function (e) {
-      if (!g().img && !e.target.closest('.xtools')) pickFile(function (src) { if (src) { g().img = src; drawPaint(k, i); save(); } });
+      if (e.target.closest('.xtools')) return;
+      if (!g().img) pickFile(function (src) { if (src) { g().img = src; drawPaint(k, i); save(); } });
+      else popup(k, i);
     });
     if (!z.sig) {
       box.addEventListener('dragover', function (e) { e.preventDefault(); box.classList.add('over'); });
@@ -414,7 +429,7 @@ var XLF = (function () {
         d.strokes.push({ t: 'text', a: p, s: t.trim(), col: o.col, lw: o.lw }); if (onEnd) onEnd(); return;
       }
       cv.setPointerCapture(e.pointerId);
-      if (z.sig && o.t === 'eraser') { cur = { t: 'eraser' }; eraseAt(p); return; }
+      if (o.t === 'eraser') { cur = { t: 'eraser' }; eraseAt(p); return; }
       cur = o.t === 'pen' ? { t: 'pen', p: [p], col: o.col, lw: o.lw, dash: !z.sig && o.dash } : { t: o.t, a: p, b: p, col: o.col, lw: o.lw, dash: o.dash };
       d.strokes.push(cur); if (onMove) onMove();
     });
@@ -448,22 +463,33 @@ var XLF = (function () {
       var scale = Math.min(1, 1400 / Math.max(im.naturalWidth, im.naturalHeight));
       var c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * scale); c.height = Math.round(im.naturalHeight * scale);
       var x = c.getContext('2d'), rect = null, start = null;
-      function draw() {
-        x.clearRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
-        if (rect) { x.save(); x.fillStyle = 'rgba(15,23,42,.38)'; x.fillRect(0,0,c.width,c.height); x.clearRect(rect.x,rect.y,rect.w,rect.h); x.strokeStyle='#38bdf8'; x.lineWidth=Math.max(2,c.width/500); x.setLineDash([8,5]); x.strokeRect(rect.x,rect.y,rect.w,rect.h); x.restore(); }
-      }
+      function draw() { x.clearRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height); }
       var ov=el('div','xpop');
       ov.innerHTML='<div class="box"><h3>Potong foto</h3><p style="margin:0 0 8px;font:12px Segoe UI,Arial;color:#475569">Seret pada foto untuk memilih area yang dipertahankan.</p><div class="crop-stage"><canvas class="crop-canvas"></canvas></div><div class="row"><span style="flex:1"></span><button type="button" class="no">Batal</button><button type="button" class="ok">Terapkan crop</button></div></div>';
       document.body.appendChild(ov);
       var view=ov.querySelector('canvas'); view.width=c.width; view.height=c.height; view.style.width=c.width+'px'; view.style.height=c.height+'px';
       var vx=view.getContext('2d');
-      function preview(){draw();vx.clearRect(0,0,c.width,c.height);vx.drawImage(c,0,0);if(rect){vx.fillStyle='rgba(15,23,42,.38)';vx.fillRect(0,0,c.width,c.height);vx.clearRect(rect.x,rect.y,rect.w,rect.h);vx.strokeStyle='#38bdf8';vx.lineWidth=Math.max(2,c.width/500);vx.setLineDash([8,5]);vx.strokeRect(rect.x,rect.y,rect.w,rect.h);vx.setLineDash([]);}}
+      function preview(){vx.clearRect(0,0,c.width,c.height);vx.drawImage(c,0,0);if(rect){var x2=rect.x+rect.w,y2=rect.y+rect.h;vx.fillStyle='rgba(15,23,42,.42)';vx.fillRect(0,0,c.width,rect.y);vx.fillRect(0,y2,c.width,c.height-y2);vx.fillRect(0,rect.y,rect.x,rect.h);vx.fillRect(x2,rect.y,c.width-x2,rect.h);vx.strokeStyle='#38bdf8';vx.lineWidth=Math.max(2,c.width/500);vx.setLineDash([8,5]);vx.strokeRect(rect.x,rect.y,rect.w,rect.h);vx.setLineDash([]);}}
       function pos(e){var r=view.getBoundingClientRect();return [Math.max(0,Math.min(c.width,(e.clientX-r.left)*c.width/r.width)),Math.max(0,Math.min(c.height,(e.clientY-r.top)*c.height/r.height))];}
       view.addEventListener('pointerdown',function(e){start=pos(e);rect={x:start[0],y:start[1],w:0,h:0};view.setPointerCapture(e.pointerId);preview();});
       view.addEventListener('pointermove',function(e){if(!start)return;var p=pos(e);rect={x:Math.min(start[0],p[0]),y:Math.min(start[1],p[1]),w:Math.abs(start[0]-p[0]),h:Math.abs(start[1]-p[1])};preview();});
       view.addEventListener('pointerup',function(){start=null;});
       ov.querySelector('.no').onclick=function(){ov.remove();};
-      ov.querySelector('.ok').onclick=function(){if(!rect||rect.w<8||rect.h<8)return;var out=document.createElement('canvas');out.width=Math.round(rect.w);out.height=Math.round(rect.h);out.getContext('2d').drawImage(c,rect.x,rect.y,rect.w,rect.h,0,0,out.width,out.height);d.img=out.toDataURL('image/jpeg',.9);(d.strokes||[]).forEach(function(s){var map=function(p){if(!p)return; p[0]=Math.max(0,Math.min(1,(p[0]*c.width-rect.x)/rect.w));p[1]=Math.max(0,Math.min(1,(p[1]*c.height-rect.y)/rect.h));};(s.p||[]).forEach(map);map(s.a);map(s.b);});ov.remove();if(done)done();};
+      ov.querySelector('.ok').onclick=function(){
+        if(!rect||rect.w<8||rect.h<8)return;
+        var left=Math.max(0,Math.floor(rect.x)),top=Math.max(0,Math.floor(rect.y));
+        var right=Math.min(c.width,Math.ceil(rect.x+rect.w)),bottom=Math.min(c.height,Math.ceil(rect.y+rect.h));
+        var width=right-left,height=bottom-top;
+        if(width<1||height<1)return;
+        var out=document.createElement('canvas');out.width=width;out.height=height;
+        out.getContext('2d').drawImage(c,left,top,width,height,0,0,width,height);
+        d.img=out.toDataURL('image/jpeg',.92);
+        (d.strokes||[]).forEach(function(s){
+          var map=function(p){if(!p)return;p[0]=Math.max(0,Math.min(1,(p[0]*c.width-left)/width));p[1]=Math.max(0,Math.min(1,(p[1]*c.height-top)/height));};
+          (s.p||[]).forEach(map);map(s.a);map(s.b);
+        });
+        ov.remove();if(done)done();
+      };
       draw(); preview();
     };
     im.src=d.img;
