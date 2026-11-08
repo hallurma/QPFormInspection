@@ -351,15 +351,16 @@
   }
 
 
-  /* ===== PAS LAYAR (HP / tablet) ===== */
-  .jo-fit-btn { display: none; align-items: center; gap: 5px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0;
-                border-radius: 8px; padding: 6px 10px; font: 700 12px 'Segoe UI', Arial, sans-serif; cursor: pointer; white-space: nowrap; }
-  .jo-fit-btn.on { background: #2563eb; border-color: #2563eb; color: #fff; }
-  html.jo-fit-able .jo-fit-btn { display: inline-flex; }
-  .jo-stage iframe.jo-fit { right: auto !important; bottom: auto !important; transform-origin: 0 0; }
+  .jo-mode-control { display: flex; align-items: center; gap: 7px; padding: 4px 8px; border: 1px solid #475569; border-radius: 8px; color: #e2e8f0; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .jo-mode-control[hidden] { display: none !important; }
+  .jo-mode-control input { position: absolute; opacity: 0; pointer-events: none; }
+  .jo-mode-control .track { width: 36px; height: 20px; padding: 2px; border-radius: 20px; background: #64748b; cursor: pointer; }
+  .jo-mode-control .track::after { content: ''; display: block; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s ease; }
+  .jo-mode-control input:checked + .track { background: #047857; }
+  .jo-mode-control input:checked + .track::after { transform: translateX(16px); }
 
   /* ===== PANGGUNG IFRAME ===== */
-  .jo-stage { flex: 1; position: relative; min-height: 0; overflow: auto; }
+  .jo-stage { flex: 1; position: relative; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
   .jo-stage.hidden { display: none; }
   html.jo-overlay-open .jo-bar { display: none !important; }
   html.jo-overlay-open .jo-stage {
@@ -426,6 +427,14 @@
     <option value="g">Gantt Schedule</option>
     <option value="h">Pengecoran — QP-006-08 (a), 006-06 (c), 006-08 (d)</option>
   </select>
+  <div class="jo-mode-control" id="joModeControl" hidden>
+    <span>Mode tampilan</span>
+    <label title="Beralih antara tampilan New dan Classic">
+      <input type="checkbox" id="joModeToggle" onchange="joSetLayoutMode(this.checked)">
+      <span class="track" aria-hidden="true"></span>
+    </label>
+    <span id="joModeLabel">New</span>
+  </div>
   <div class="jo-tabs">
     <button class="jo-tab b" id="joTab-b" onclick="joOpen('b')">
       <span class="dot"></span> Inspection List <span class="code">QP-006-02 (b)</span>
@@ -443,7 +452,6 @@
       <span class="dot"></span> Gantt <span class="code">Schedule</span>
     </button>
   </div>
-    <button type="button" class="jo-fit-btn" id="joFitBtn" onclick="joFitToggle()" title="Tampilkan seluruh kolom form selebar layar">&#10530; Pas layar</button>
     <div class="jo-lang" id="joLang-B" data-noi18n><button type="button" class="jo-lang-btn" onclick="joLangToggle(this)" title="Language / Bahasa / 言語"><span class="jo-lang-cur"></span><span class="jo-lang-code"></span><span class="jo-lang-car">&#9662;</span></button><div class="jo-lang-menu"><button type="button" class="jo-lang-opt" data-lang="id" onclick="joSetLang('id')"><svg class="jo-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="10" fill="#d71920"/><rect y="10" width="30" height="10" fill="#fff"/><rect width="30" height="20" fill="none" stroke="#cbd5e1" stroke-width="1"/></svg><span>Bahasa Indonesia</span></button><button type="button" class="jo-lang-opt" data-lang="en" onclick="joSetLang('en')"><svg class="jo-flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukcBen"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><rect width="60" height="30" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ukcBen)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg><span>English</span></button><button type="button" class="jo-lang-opt" data-lang="ja" onclick="joSetLang('ja')"><svg class="jo-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#fff" stroke="#cbd5e1" stroke-width="1"/><circle cx="15" cy="10" r="6" fill="#bc002d"/></svg><span>日本語</span></button></div></div>
 </div>
 
@@ -741,6 +749,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .xd .xtools button:hover { background: #eff6ff; }
   /* alat anotasi */
   .xd.xann .xtools { left: 2px; right: 2px; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+  .xd.xgallery canvas { cursor: pointer; touch-action: manipulation; }
+  .xd.xgallery .xtools { left: 2px; right: 2px; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+  .xd.xgallery .gallery-tools { opacity: 1; }
   .xtools .tgrp { display: inline-flex; align-items: center; gap: 2px; background: rgba(255,255,255,.92);
                   border: 1px solid #cbd5e1; border-radius: 5px; padding: 1px 2px; }
   .xtools .tgrp button { border: none !important; padding: 1px 5px !important; min-width: 20px; }
@@ -759,8 +770,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .xtools.big .tgrp { padding: 3px 4px; } .xtools.big .tgrp button { font-size: 14px !important; padding: 3px 8px !important; }
   .xtools.big .sw { width: 22px; height: 22px; } .xtools.big .spec { width: 24px; height: 24px; }
   .xtools.big .lwl input { width: 110px; }
-  .xpop { position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,.6); display: flex; align-items: center; justify-content: center; }
-  .xpop .box { background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 14px 44px rgba(0,0,0,.35); }
+  .xpop { position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,.6); display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left)); }
+  .xpop .box { box-sizing: border-box; max-width: 100%; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 14px 44px rgba(0,0,0,.35); }
   .xpop .box.chart-box { max-height: calc(100vh - 28px); overflow: auto; }
   .chart-editor { margin-top: 8px; max-height: 150px; overflow: auto; font: 12px 'Segoe UI',Arial,sans-serif; }
   .chart-editor table { border-collapse: collapse; width: 100%; }
@@ -831,7 +842,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <div class="hint">
   Tiga form pengecoran dalam satu berkas — gulir dari atas ke bawah. Isi langsung di kotak berwarna kuning.
-  Kotak tanda tangan, Key Plan, dan grafik bisa dicoret langsung atau lewat <b>Perbesar</b>; Key Plan juga bisa disisipi gambar.
+  Kotak Key Plan dan grafik diisi dengan memilih gambar dari galeri; anotasi tersedia setelah menekan <b>Perbesar / Annotate</b>.
   Kotak <b>OK / NG</b> cukup diklik. <b>Generate Excel</b> menghasilkan satu workbook berisi ketiga form dengan bentuk asli. Jika ingin file terpisah, gunakan tombol <b>Excel halaman ini</b>.
 </div>
 
@@ -863,8 +874,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <tr style="height:20.0px"><td style="border-top:none;border-left:1px solid #000;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;font-weight:700;">POUR DETAILS</td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:1px solid #000;border-bottom:none;"></td></tr>
 <tr style="height:20.0px"><td style="border-top:none;border-left:1px solid #000;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:1px solid #000;border-bottom:none;"></td></tr>
 <tr style="height:20.0px"><td style="border-top:none;border-left:1px solid #000;border-right:none;border-bottom:none;"></td><td colspan="9" style="border-top:none;border-left:none;border-right:none;border-bottom:none;">VOLUME OF CONCRETE THIS POUR <input id="fVol" class="ul" style="width:86px" placeholder="____________"> M3 GRADE OF CONCRETE <input id="fGrade" class="ul" style="width:112px" placeholder="________________"></td><td style="border-top:none;border-left:none;border-right:1px solid #000;border-bottom:none;"></td></tr>
-<tr style="height:20.0px"><td style="border-top:none;border-left:1px solid #000;border-right:none;border-bottom:none;"></td><td colspan="2" style="border-top:none;border-left:none;border-right:none;border-bottom:none;"><span class="opt" data-g="mix">HANDMIX</span>/ <span class="opt" data-g="mix">READYMIX</span></td><td colspan="7" style="border-top:none;border-left:none;border-right:none;border-bottom:none;"><span class="opt" data-g="base">SUBGRADE</span>/ <span class="opt" data-g="base">SURFACE STRUCTURE</span></td><td style="border-top:none;border-left:none;border-right:1px solid #000;border-bottom:none;"></td></tr>
-<tr style="height:20.0px"><td style="border-top:none;border-left:1px solid #000;border-right:none;border-bottom:none;"></td><td colspan="9" style="border-top:none;border-left:none;border-right:none;border-bottom:none;"><span class="opt" data-g="elm">SLAB</span>/ <span class="opt" data-g="elm">BEAM</span>/ <span class="opt" data-g="elm">COLUMN</span>/ <span class="opt" data-g="elm">BOX</span>/ <span class="opt" data-g="elm">BLOCK STRUCTURE</span></td><td style="border-top:none;border-left:none;border-right:1px solid #000;border-bottom:none;"></td></tr>
+<tr style="height:20.0px"><td style="border-top:none;border-left:1px solid #000;border-right:none;border-bottom:none;"></td><td colspan="2" style="border-top:none;border-left:none;border-right:none;border-bottom:none;"><span class="opt" data-g="mix">HANDMIX</span>/ <span class="opt" data-g="mix">READYMIX</span></td><td colspan="7" style="border-top:none;border-left:none;border-right:none;border-bottom:none;"><span class="opt" data-g="base">SUBGRADE</span>/ <span class="opt" data-g="base">SURFACE STRUCTURE</span> <input id="fBaseExtra" class="ul" style="width:290px" placeholder="________________________"></td><td style="border-top:none;border-left:none;border-right:1px solid #000;border-bottom:none;"></td></tr>
+<tr style="height:20.0px"><td style="border-top:none;border-left:1px solid #000;border-right:none;border-bottom:none;"></td><td colspan="9" style="border-top:none;border-left:none;border-right:none;border-bottom:none;"><span class="opt" data-g="elm">SLAB</span>/ <span class="opt" data-g="elm">BEAM</span>/ <span class="opt" data-g="elm">COLUMN</span>/ <span class="opt" data-g="elm">BOX</span>/ <span class="opt" data-g="elm">BLOCK STRUCTURE</span> <input id="fElmExtra" class="ul" style="width:390px" placeholder="________________________________"></td><td style="border-top:none;border-left:none;border-right:1px solid #000;border-bottom:none;"></td></tr>
 <tr style="height:9.53px"><td style="border-top:none;border-left:1px solid #000;border-right:none;border-bottom:1px solid #000;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:1px solid #000;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:1px solid #000;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:1px solid #000;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:1px solid #000;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:1px solid #000;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:1px solid #000;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:1px solid #000;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:1px solid #000;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:1px solid #000;"></td><td style="border-top:none;border-left:none;border-right:1px solid #000;border-bottom:1px solid #000;"></td></tr>
 <tr style="height:9.53px"><td style="border-top:none;border-left:1px solid #000;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:1px solid #000;border-bottom:none;"></td></tr>
 <tr style="height:20.0px"><td style="border-top:none;border-left:1px solid #000;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;font-weight:700;">INSPECTION CHECK LIST WORK ITEMS</td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:none;border-bottom:none;"></td><td style="border-top:none;border-left:none;border-right:1px solid #000;border-bottom:none;"></td></tr>
@@ -913,7 +924,7 @@ document.getElementById('logoImg').src = 'data:image/png;base64,iVBORw0KGgoAAAAN
 
 var $ = function (id) { return document.getElementById(id); };
 var KEY = 'qp00608a_draft_v1';
-var TXT = ['fInspector', 'fProject', 'fInspDate', 'fPourDate', 'fResDate', 'fVol', 'fGrade', 'sigTitleOwner', 'sigTitleAppr', 'sigTitleInsp'];
+var TXT = ['fInspector', 'fProject', 'fInspDate', 'fPourDate', 'fResDate', 'fVol', 'fGrade', 'fBaseExtra', 'fElmExtra', 'sigTitleOwner', 'sigTitleAppr', 'sigTitleInsp'];
 for (var r = 33; r <= 39; r++) TXT.push('cB' + r, 'cC' + r, 'cF' + r, 'cI' + r);
 var COLW = [24, 115, 66, 43, 80, 28, 37, 94, 94, 94, 24];
 // kotak isian biasa memakai .value, kotak checklist (contenteditable) memakai teksnya
@@ -1252,11 +1263,13 @@ async function exportExcel(shouldDownload) {
     }
     if (document.querySelector('.opt.pick[data-g="mix"]'))
       x = setCell(x, 'B25', optRich('mix', [{ t: 'HANDMIX', o: 1 }, { t: '/ ' }, { t: 'READYMIX', o: 1 }]), 1);
-    if (document.querySelector('.opt.pick[data-g="base"]'))
-      x = setCell(x, 'D25', optRich('base', [{ t: 'SUBGRADE', o: 1 }, { t: '/ ' }, { t: 'SURFACE STRUCTURE', o: 1 }]), 1);
-    if (document.querySelector('.opt.pick[data-g="elm"]'))
+    if (document.querySelector('.opt.pick[data-g="base"]') || v('fBaseExtra'))
+      x = setCell(x, 'D25', optRich('base', [{ t: 'SUBGRADE', o: 1 }, { t: '/ ' }, { t: 'SURFACE STRUCTURE', o: 1 }]) +
+        (v('fBaseExtra') ? run(' ' + v('fBaseExtra'), '<u/>') : ''), 1);
+    if (document.querySelector('.opt.pick[data-g="elm"]') || v('fElmExtra'))
       x = setCell(x, 'B26', optRich('elm', [{ t: 'SLAB', o: 1 }, { t: '/ ' }, { t: 'BEAM', o: 1 }, { t: '/ ' },
-        { t: 'COLUMN', o: 1 }, { t: '/ ' }, { t: 'BOX', o: 1 }, { t: '/ ' }, { t: 'BLOCK STRUCTURE', o: 1 }]), 1);
+        { t: 'COLUMN', o: 1 }, { t: '/ ' }, { t: 'BOX', o: 1 }, { t: '/ ' }, { t: 'BLOCK STRUCTURE', o: 1 }]) +
+        (v('fElmExtra') ? run(' ' + v('fElmExtra'), '<u/>') : ''), 1);
 
     // ---- check list: teks dibungkus & tinggi baris menyesuaikan isi ----
     var CL = [];
@@ -1484,12 +1497,15 @@ var XLF = (function () {
   var TOOLS = [['pen', '✎', 'Coretan bebas'], ['eraser', '🧽', 'Penghapus objek / manual'], ['line', '╱', 'Garis'], ['arrow', '➝', 'Panah'],
                ['rect', '▭', 'Kotak'], ['ellipse', '◯', 'Lingkaran / elips'], ['text', 'T', 'Teks']];
   var SWATCH = ['#d40000', '#ff7a00', '#ffd400', '#0a8a2a', '#0f2a80', '#000000', '#ffffff'];
+  function galleryOnlyZone(z, f) {
+    return f === 'd' && (z.key === 'grafik' || /key\s*plan/i.test((z.key || '') + ' ' + (z.label || '')));
+  }
   function optOf(d, z) {
     d.opt = d.opt || { t: 'pen', col: z.sig ? '#0f2a80' : '#d40000', lw: z.sig ? 1.9 : 2, dash: false, eraseMode: 'object' };
     if (!d.opt.eraseMode) d.opt.eraseMode = 'object';
     return d.opt;
   }
-  function toolsHTML(z, big) {
+  function toolsHTML(z, big, f) {
     if (z.sig) return '<span class="tgrp"><label>Nama <input type="text" data-a="sigLabel" value="' + xesc(z.label || '') + '" style="width:105px"></label><label class="spec" title="Warna tanda tangan"><input type="color" data-a="col"></label>' +
       '<label class="lwl" title="Ketebalan garis">≡<input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label></span>' +
       '<span class="tgrp"><button type="button" class="tl" data-t="pen" title="Tulis tanda tangan">✍</button></span>' +
@@ -1503,7 +1519,7 @@ var XLF = (function () {
       '<label class="spec" title="Pilih warna bebas (spektrum)"><input type="color" data-a="col"></label></span>';
     h += '<span class="tgrp"><label class="lwl" title="Tebal garis">≡<input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label>' +
       '<button type="button" class="dsh" data-a="dash" title="Garis putus-putus">┄</button></span>';
-    h += '<span class="tgrp">' + (z.img ? '<button type="button" data-a="img" title="Sisipkan gambar / foto">🖼</button>' : '') +
+    h += '<span class="tgrp">' + ((z.img || galleryOnlyZone(z, f)) ? '<button type="button" data-a="img" title="Pilih gambar dari galeri">🖼</button>' : '') +
       '<button type="button" data-a="undo" title="Batalkan goresan terakhir">↶</button>' +
       (big ? '' : '<button type="button" data-a="big" title="Buka editor besar">Perbesar</button><button type="button" data-a="clr" title="Hapus semua">✕</button>') + '</span>';
     return h;
@@ -1545,16 +1561,26 @@ var XLF = (function () {
 
   function buildDraw(f, s, i, z, ovl) {
     S[f][s][i] = S[f][s][i] || blankDraw();
-    var box = el('div', 'xd' + (z.sig ? ' xsig' : ' xann'));
+    var galleryOnly = galleryOnlyZone(z, f);
+    var box = el('div', 'xd' + (z.sig ? ' xsig' : galleryOnly ? ' xgallery' : ' xann'));
     box.id = zid(f, s, i);
     box.style.cssText = 'left:' + z.x + 'px;top:' + z.y + 'px;width:' + z.w + 'px;height:' + z.h + 'px';
-    var hint = z.key === 'grafik' ? 'Isi titik jam dan volume lewat Perbesar' : (z.sig ? '✍ tanda tangan' : (z.img ? '✏ anotasi / 🖼 sisipkan gambar' : '✏ coret / anotasi di sini'));
-    box.innerHTML = '<canvas></canvas><span class="xhint">' + hint + '</span><div class="xtools">' + toolsHTML(z, false) + '</div>';
+    var hint = galleryOnly ? '🖼 Klik untuk pilih gambar dari galeri' : (z.sig ? '✍ tanda tangan' : (z.img ? '✏ anotasi / 🖼 sisipkan gambar' : '✏ coret / anotasi di sini'));
+    var tools = galleryOnly
+      ? '<span class="tgrp"><button type="button" data-a="img" title="Pilih gambar dari galeri">🖼 Galeri</button><button type="button" data-a="big" title="Perbesar untuk anotasi">⤢ Perbesar / Annotate</button></span>'
+      : toolsHTML(z, false, f);
+    box.innerHTML = '<canvas></canvas><span class="xhint">' + hint + '</span><div class="xtools' + (galleryOnly ? ' gallery-tools' : '') + '">' + tools + '</div>';
     ovl.appendChild(box);
     var cv = box.querySelector('canvas'), tools = box.querySelector('.xtools');
     if (z.sig) {
       box.classList.add('sig-launch'); box.title = 'Klik untuk membuka editor tanda tangan';
       box.addEventListener('click', function () { popup(f, s, i); });
+    } else if (galleryOnly) {
+      box.title = 'Klik kotak atau Galeri untuk memilih gambar dari perangkat';
+      box.addEventListener('click', function (e) {
+        if (e.target.closest('.xtools')) return;
+        pickImg(f, s, i);
+      });
     } else attachPad(cv, function () { return S[f][s][i]; }, z, function () { return [z.w, z.h]; },
               function () { drawPaint(f, s, i); save(); }, function () { drawPaint(f, s, i); });
     wireTools(tools, function () { return S[f][s][i]; }, z, function () { drawPaint(f, s, i); }, function (a) {
@@ -1682,7 +1708,7 @@ var XLF = (function () {
       x.clearRect(0, 0, w, h);
       if (im) { var r = Math.min(w / im.naturalWidth, h / im.naturalHeight), iw = im.naturalWidth * r, ih = im.naturalHeight * r;
                 x.drawImage(im, (w - iw) / 2, (h - ih) / 2, iw, ih); }
-      if (z.key === 'grafik') drawChart(x, d.chartPoints || [], w, h);
+      if (z.key === 'grafik' && !d.img) drawChart(x, d.chartPoints || [], w, h);
       d.strokes.forEach(function (st) {
         if (!st.t && st.lw == null) st = { c: st.c, p: st.p || st, lw: z.sig ? 1.9 : 1.5 };
         drawShape(x, st, w, h, scale);
@@ -1766,7 +1792,7 @@ var XLF = (function () {
     popupSize();
     var ov = el('div', 'xpop');
     ov.innerHTML = '<div class="box' + (isChart ? ' chart-box' : '') + '"><h3>' + (z.sig ? 'Tanda tangan — ' : 'Anotasi — ') + z.label + '</h3>' +
-      '<div class="xtools big">' + toolsHTML(z, true) + '</div><canvas></canvas>' +
+      '<div class="xtools big">' + toolsHTML(z, true, f) + '</div><canvas></canvas>' +
       (isChart ? '<div class="chart-editor"><table><thead><tr><th>No.</th><th>Jam (X)</th><th>Volume m³ (Y)</th><th></th></tr></thead><tbody></tbody></table><button type="button" class="chart-add">+ Tambah titik</button><small> Isi waktu dan volume tiap titik; grafik akan mengikuti data tersebut.</small></div>' : '') +
       '<div class="row"><button type="button" class="clr">Hapus semua</button>' +
       (z.sig ? '<button type="button" class="und">↶ Undo</button>' : '') + '<span style="flex:1"></span>' +
@@ -2121,6 +2147,141 @@ function zipPath(base, target) {
   return out.join('/');
 }
 function fileName(path) { return path.slice(path.lastIndexOf('/') + 1); }
+function parseXmlPart(xml, path) {
+  var doc = new DOMParser().parseFromString(xml, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('XML tidak valid: ' + path);
+  return doc;
+}
+function xmlChild(parent, name) {
+  for (var i = 0; i < parent.childNodes.length; i++)
+    if (parent.childNodes[i].nodeType === 1 && parent.childNodes[i].localName === name) return parent.childNodes[i];
+  return null;
+}
+function xmlChildren(parent) {
+  var out = [];
+  for (var i = 0; i < parent.childNodes.length; i++)
+    if (parent.childNodes[i].nodeType === 1) out.push(parent.childNodes[i]);
+  return out;
+}
+function xmlCollection(doc, name, create) {
+  var root = doc.documentElement, node = xmlChild(root, name);
+  if (node || !create) return node;
+  var order = ['numFmts', 'fonts', 'fills', 'borders', 'cellStyleXfs', 'cellXfs', 'cellStyles', 'dxfs', 'tableStyles', 'colors', 'extLst'];
+  node = doc.createElementNS(root.namespaceURI, name);
+  var index = order.indexOf(name), children = xmlChildren(root), before = null;
+  for (var i = 0; i < children.length; i++)
+    if (order.indexOf(children[i].localName) > index) { before = children[i]; break; }
+  root.insertBefore(node, before);
+  return node;
+}
+function updateXmlCount(node) {
+  node.setAttribute('count', String(xmlChildren(node).length));
+}
+function remapXf(xf, maps) {
+  [['fontId', maps.fonts], ['fillId', maps.fills], ['borderId', maps.borders],
+   ['numFmtId', maps.numFmts], ['xfId', maps.cellStyleXfs]].forEach(function (item) {
+    var value = xf.getAttribute(item[0]);
+    if (value == null || value === '') return;
+    var mapped = item[1] && item[1][value];
+    if (mapped != null) xf.setAttribute(item[0], String(mapped));
+  });
+}
+async function mergeWorkbookStyles(base, src) {
+  var baseFile = base.file('xl/styles.xml'), sourceFile = src.file('xl/styles.xml');
+  if (!baseFile || !sourceFile) throw new Error('Workbook tidak memiliki styles.xml.');
+  var baseText = await baseFile.async('string'), sourceText = await sourceFile.async('string');
+  var baseDoc = parseXmlPart(baseText, 'xl/styles.xml'), sourceDoc = parseXmlPart(sourceText, 'xl/styles.xml');
+  var maps = { fonts: [], fills: [], borders: [], numFmts: {}, cellStyleXfs: [] };
+  ['fonts', 'fills', 'borders'].forEach(function (name) {
+    var sourceCollection = xmlCollection(sourceDoc, name, false);
+    if (!sourceCollection) return;
+    var targetCollection = xmlCollection(baseDoc, name, true), offset = xmlChildren(targetCollection).length;
+    xmlChildren(sourceCollection).forEach(function (item, index) {
+      maps[name][index] = offset + index;
+      targetCollection.appendChild(baseDoc.importNode(item, true));
+    });
+    updateXmlCount(targetCollection);
+  });
+  var sourceNumFmts = xmlCollection(sourceDoc, 'numFmts', false);
+  if (sourceNumFmts) {
+    var targetNumFmts = xmlCollection(baseDoc, 'numFmts', true), nextNumFmt = 164;
+    xmlChildren(targetNumFmts).forEach(function (item) {
+      nextNumFmt = Math.max(nextNumFmt, (+item.getAttribute('numFmtId') || 0) + 1);
+    });
+    xmlChildren(sourceNumFmts).forEach(function (item) {
+      var copy = baseDoc.importNode(item, true), oldId = item.getAttribute('numFmtId');
+      maps.numFmts[oldId] = nextNumFmt;
+      copy.setAttribute('numFmtId', String(nextNumFmt++));
+      targetNumFmts.appendChild(copy);
+    });
+    updateXmlCount(targetNumFmts);
+  }
+  var sourceStyleXfs = xmlCollection(sourceDoc, 'cellStyleXfs', false);
+  if (sourceStyleXfs) {
+    var targetStyleXfs = xmlCollection(baseDoc, 'cellStyleXfs', true), styleOffset = xmlChildren(targetStyleXfs).length;
+    xmlChildren(sourceStyleXfs).forEach(function (item, index) {
+      maps.cellStyleXfs[index] = styleOffset + index;
+      var copy = baseDoc.importNode(item, true);
+      remapXf(copy, maps);
+      targetStyleXfs.appendChild(copy);
+    });
+    updateXmlCount(targetStyleXfs);
+  }
+  var sourceCellXfs = xmlCollection(sourceDoc, 'cellXfs', false);
+  if (!sourceCellXfs) throw new Error('Workbook tidak memiliki cellXfs.');
+  var targetCellXfs = xmlCollection(baseDoc, 'cellXfs', true), cellOffset = xmlChildren(targetCellXfs).length;
+  var cellStyleMap = [];
+  xmlChildren(sourceCellXfs).forEach(function (item, index) {
+    cellStyleMap[index] = cellOffset + index;
+    var copy = baseDoc.importNode(item, true);
+    remapXf(copy, maps);
+    targetCellXfs.appendChild(copy);
+  });
+  updateXmlCount(targetCellXfs);
+  base.file('xl/styles.xml', new XMLSerializer().serializeToString(baseDoc));
+  return cellStyleMap;
+}
+async function mergeSharedStrings(base, src) {
+  var baseFile = base.file('xl/sharedStrings.xml'), sourceFile = src.file('xl/sharedStrings.xml');
+  if (!baseFile) throw new Error('Workbook utama tidak memiliki sharedStrings.xml.');
+  if (!sourceFile) return [];
+  var baseText = await baseFile.async('string'), sourceText = await sourceFile.async('string');
+  var baseDoc = parseXmlPart(baseText, 'xl/sharedStrings.xml'), sourceDoc = parseXmlPart(sourceText, 'xl/sharedStrings.xml');
+  var target = baseDoc.documentElement, sourceItems = xmlChildren(sourceDoc.documentElement);
+  var offset = xmlChildren(target).length, sourceCount = +sourceDoc.documentElement.getAttribute('count') || sourceItems.length;
+  sourceItems.forEach(function (item) { target.appendChild(baseDoc.importNode(item, true)); });
+  target.setAttribute('count', String((+target.getAttribute('count') || offset) + sourceCount));
+  target.setAttribute('uniqueCount', String(xmlChildren(target).length));
+  base.file('xl/sharedStrings.xml', new XMLSerializer().serializeToString(baseDoc));
+  return sourceItems.map(function (_, index) { return offset + index; });
+}
+function setXmlAttribute(tag, name, value) {
+  var re = new RegExp('(\\b' + name + '\\s*=\\s*")[^"]*(")');
+  if (re.test(tag)) return tag.replace(re, '$1' + value + '$2');
+  return tag.replace(/\/?>$/, function (end) { return ' ' + name + '="' + value + '"' + end; });
+}
+function remapWorksheet(xml, styleMap, sharedMap) {
+  xml = xml.replace(/<(?:row|col)\b[^>]*>/g, function (tag) {
+    var attr = tag.indexOf('<row') === 0 ? 's' : 'style', oldStyle = xmlAttr(tag, attr);
+    if (oldStyle === '') return tag;
+    var newStyle = styleMap[+oldStyle];
+    if (newStyle == null) throw new Error('Gaya baris/kolom tidak ditemukan: ' + oldStyle);
+    return setXmlAttribute(tag, attr, newStyle);
+  });
+  return xml.replace(/<c\b[^>]*(?:\/>|>[\s\S]*?<\/c>)/g, function (cell) {
+    var end = cell.indexOf('>'), openTag = cell.slice(0, end + 1);
+    if (/\/>$/.test(openTag)) return cell;
+    var oldStyle = xmlAttr(openTag, 's') || '0', newStyle = styleMap[+oldStyle];
+    if (newStyle == null) throw new Error('Gaya sel tidak ditemukan: ' + oldStyle);
+    cell = setXmlAttribute(openTag, 's', newStyle) + cell.slice(end + 1);
+    if (xmlAttr(openTag, 't') === 's') {
+      var value = cell.match(/<v>(\d+)<\/v>/);
+      if (!value || sharedMap[+value[1]] == null) throw new Error('Teks bersama tidak ditemukan pada indeks ' + (value ? value[1] : '?'));
+      cell = cell.replace(value[0], '<v>' + sharedMap[+value[1]] + '</v>');
+    }
+    return cell;
+  });
+}
 async function mergeExcelWorkbooks(results) {
   var base = await JSZip.loadAsync(await results[0].blob.arrayBuffer());
   var workbook = await base.file('xl/workbook.xml').async('string');
@@ -2137,6 +2298,8 @@ async function mergeExcelWorkbooks(results) {
   var sourceLabels = ['QP-006-06(c)', 'QP-006-08(d)'];
   for (var fi = 1; fi < results.length; fi++) {
     var src = await JSZip.loadAsync(await results[fi].blob.arrayBuffer());
+    var sharedMap = await mergeSharedStrings(base, src);
+    var styleMap = await mergeWorkbookStyles(base, src);
     var swb = await src.file('xl/workbook.xml').async('string');
     var swr = await src.file('xl/_rels/workbook.xml.rels').async('string');
     var sheets = swb.match(/<sheet\b[^>]*\/?>(?:<\/sheet>)?/g) || [];
@@ -2148,13 +2311,25 @@ async function mergeExcelWorkbooks(results) {
       var oldSheet = src.file(oldSheetPath);
       if (!oldSheet) continue;
       var newSheetPath = 'xl/worksheets/sheet' + sheetNo++ + '.xml';
-      base.file(newSheetPath, await oldSheet.async('uint8array'));
+      var newSheetXml = remapWorksheet(await oldSheet.async('string'), styleMap, sharedMap);
+      base.file(newSheetPath, newSheetXml);
       var newSheetRelsPath = 'xl/worksheets/_rels/' + fileName(newSheetPath) + '.rels';
       var oldSheetRelsPath = 'xl/worksheets/_rels/' + fileName(oldSheetPath) + '.rels';
       var sourceSheetRels = src.file(oldSheetRelsPath);
       if (sourceSheetRels) {
         var sr = await sourceSheetRels.async('string');
         var drawings = [];
+        var printerRels = sr.match(/<Relationship\b[^>]*\/?>(?:<\/Relationship>)?/g) || [];
+        for (var pri = 0; pri < printerRels.length; pri++) {
+          var printerRel = printerRels[pri], printerTarget = xmlAttr(printerRel, 'Target');
+          if (!printerTarget || xmlAttr(printerRel, 'TargetMode') === 'External' || !/printerSettings/i.test(xmlAttr(printerRel, 'Type'))) continue;
+          var oldPrinterPath = zipPath(oldSheetPath.slice(0, oldSheetPath.lastIndexOf('/')), printerTarget);
+          var printerSettings = src.file(oldPrinterPath);
+          if (!printerSettings) continue;
+          var newPrinterPath = 'xl/printerSettings/xlf_merge_' + sheetNo + '_' + fileName(oldPrinterPath);
+          base.file(newPrinterPath, await printerSettings.async('uint8array'));
+          sr = sr.replace(printerRel, printerRel.replace(/Target="[^"]*"/, 'Target="../printerSettings/' + fileName(newPrinterPath) + '"'));
+        }
         sr = sr.replace(/<Relationship\b[^>]*\/?>(?:<\/Relationship>)?/g, function (rel) {
           var target = xmlAttr(rel, 'Target');
           if (!target || xmlAttr(rel, 'TargetMode') === 'External') return rel;
@@ -2184,6 +2359,10 @@ async function mergeExcelWorkbooks(results) {
             if (!media) return rel;
             var newMediaPath = 'xl/media/xlf_merge_' + imageNo++ + '_' + fileName(oldMediaPath);
             base.file(newMediaPath, media.async('uint8array'));
+            var extension = fileName(newMediaPath).split('.').pop().toLowerCase();
+            var imageType = extension === 'png' ? 'image/png' : extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg' : '';
+            if (imageType && !new RegExp('<Default\\b[^>]*Extension="' + extension + '"', 'i').test(contentTypes))
+              contentTypes = contentTypes.replace(/(<Types\b[^>]*>)/, '$1<Default Extension="' + extension + '" ContentType="' + imageType + '"/>');
             return rel.replace(/Target="[^"]*"/, 'Target="../media/' + fileName(newMediaPath) + '"');
           });
           var newDrawingRelsPath = 'xl/drawings/_rels/' + fileName(dr.newPath) + '.rels';
@@ -2924,11 +3103,6 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
 </button>
 
 <div class="container" id="inspectionFormContainer">
-  <div class="photo-layout-switch" title="Beralih antara formulir input New dan layout Excel utuh Classic">
-    <span>Mode tampilan</span>
-    <label><input type="checkbox" id="photoLayoutToggle" onchange="togglePhotoLayout(this.checked)"><span class="track" aria-hidden="true"></span></label>
-    <span id="photoLayoutLabel">New</span><span style="color:#64748b">Classic / New</span>
-  </div>
   <div class="photo-classic-host" id="photoClassicHost"><iframe src="qp00602b-classic.html" title="QP-006-02 (b) Classic"></iframe></div>
   <div class="brand-header">
     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -7077,6 +7251,9 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
     if (remember !== false) { try { localStorage.setItem(PHOTO_LAYOUT_KEY, classic ? 'classic' : 'new'); } catch (e) {} }
   }
   function togglePhotoLayout(classic) { applyPhotoLayout(classic ? 'classic' : 'new'); }
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.jo === 'layout-mode') applyPhotoLayout(e.data.mode, false);
+  });
 
   // ================= INISIALISASI =================
   let savedPhotoLayout = 'new';
@@ -12121,15 +12298,21 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
     .piling-sigtools { position:absolute; right:3px; bottom:3px; display:flex; gap:3px; opacity:0; transition:opacity .12s; }
     .piling-sig:hover .piling-sigtools, .piling-sig:focus-within .piling-sigtools { opacity:1; }
     .piling-sigtools button { border:1px solid #cbd5e1; border-radius:4px; background:#fff; color:#334155; padding:2px 6px; font-size:10px; cursor:pointer; }
-    .piling-sigpop { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(15,23,42,.62); }
-    .piling-sigpop .piling-sigbox-inner { width:min(920px,100%); background:#fff; border-radius:10px; padding:14px; box-shadow:0 14px 44px rgba(0,0,0,.35); }
+    .piling-sigpop { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; overflow-y:auto; padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left)); background:rgba(15,23,42,.62); }
+    .piling-sigpop .piling-sigbox-inner { box-sizing:border-box; width:min(920px,100%); max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow-y:auto; overscroll-behavior:contain; background:#fff; border-radius:10px; padding:14px; box-shadow:0 14px 44px rgba(0,0,0,.35); }
     .piling-sigpop h3 { margin:0 0 8px; font-size:14px; }
-    .piling-sigpop canvas { display:block; width:100%; height:min(260px,38vh); border:1px dashed #94a3b8; background:#f8fbff; touch-action:pinch-zoom; cursor:crosshair; }
-    .piling-sigpop .piling-sigrow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .piling-sigpop canvas { display:block; width:100%; height:min(260px,38vh); height:min(260px,38dvh); border:1px dashed #94a3b8; background:#f8fbff; touch-action:pinch-zoom; cursor:crosshair; }
+    .piling-sigpop .piling-sigrow { position:sticky; bottom:0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; padding:8px 0; background:#fff; }
     .piling-sigpop button { border:0; border-radius:6px; padding:7px 11px; background:#e2e8f0; color:#334155; font-weight:600; cursor:pointer; }
     .piling-sigpop button.active { background:#f59e0b; color:#fff; }
     .piling-sigpop button.ok { background:#16a34a; color:#fff; }
     .piling-sigpop button.danger { background:#fee2e2; color:#b91c1c; }
+    @media (max-width:900px), (max-height:700px) {
+      .piling-sigpop .piling-sigbox-inner { padding:10px; }
+      .piling-sigpop canvas { height:min(220px,32vh); height:min(220px,32dvh); }
+      .piling-sigpop .piling-sigrow { gap:5px; }
+      .piling-sigpop button { padding:6px 8px; font-size:12px; }
+    }
     /* Penanda batas halaman cetak: tiap 6 foto pindah halaman baru */
     .page-divider { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin: 8px 0 2px 0; color: #b45309; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
     .page-divider::before, .page-divider::after { content: ''; flex: 1; height: 0; border-top: 2px dashed #fbbf24; }
@@ -12443,15 +12626,6 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       <img id="headerLogoPrev" alt="PT. Jaya Obayashi Logo">
       <button style="font-size:11px; cursor:pointer;" onclick="document.getElementById('logoFileInput').click()">Ganti Logo Footer</button>
       <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="changeLogo(event)">
-    </div>
-    <div class="layout-switch" title="Ubah susunan enam kotak foto tanpa mengubah data atau format Excel">
-      <span>Mode tampilan</span>
-      <label>
-        <input type="checkbox" id="pilingLayoutToggle" onchange="togglePilingLayout(this.checked)">
-        <span class="track" aria-hidden="true"></span>
-      </label>
-      <span class="mode-label" id="pilingLayoutMode">New</span>
-      <span class="mode-hint">Classic / New</span>
     </div>
     <div id="classicModeHost" class="classic-mode-host">
       <iframe src="qp00605-classic.html" title="QP-006-05 (a) dan QP-006-05 (b) Classic"></iframe>
@@ -12985,6 +13159,9 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   function togglePilingLayout(isClassic) {
     applyPilingLayout(isClassic ? 'classic' : 'new');
   }
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.jo === 'layout-mode') applyPilingLayout(e.data.mode);
+  });
 
   // 6 foto per halaman cetak (2 kolom x 3 baris), sama seperti form aslinya.
   // Angka ini dipakai bersama oleh penanda halaman, preview, dan exportToExcel.
@@ -26509,21 +26686,6 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
 
-  // Pas layar: minta shell kembali ke 100% selama editor / pop-up terbuka.
-  var JO_HOLD_SEL = '.ann-overlay.active, .jcam-ov, .jcam-pick, .modal-overlay.active, .tut-overlay.active, .howto-ov.on, .xpop, .sigpop, .anno.on';
-  var lastHold = null, holdScroll = 0;
-  function syncFitHold() {
-    var active = !!document.querySelector(JO_HOLD_SEL);
-    if (active === lastHold) return;
-    if (active) holdScroll = window.scrollY;
-    lastHold = active;
-    if (window.parent !== window) window.parent.postMessage({ type: 'jo-fit-hold', active: active }, '*');
-    if (!active) setTimeout(function () { window.scrollTo(0, holdScroll); }, 120);
-  }
-  new MutationObserver(syncFitHold).observe(document.documentElement, {
-    childList: true, subtree: true, attributes: true, attributeFilter: ['class']
-  });
-
   var lastShellOverlayState = null;
   function syncShellOverlay() {
     var active = !!document.querySelector('.ann-overlay.active, .jcam-ov, .modal-overlay.active');
@@ -26946,13 +27108,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .xtools.big { position: static; opacity: 1; pointer-events: auto; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
   .xtools.big .tgrp { padding: 3px 4px; } .xtools.big .tgrp button { font-size: 14px; padding: 3px 8px; }
   .xtools.big .sw { width: 22px; height: 22px; } .xtools.big .spec { width: 24px; height: 24px; } .xtools.big .lwl input { width: 110px; }
-  .xpop { position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,.6); display: flex; align-items: center; justify-content: center; }
-  .xpop .box { background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 14px 44px rgba(0,0,0,.35); }
+  .xpop { position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,.6); display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left)); }
+  .xpop .box { box-sizing: border-box; max-width: 100%; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 14px 44px rgba(0,0,0,.35); }
   .xpop h3 { margin: 0 0 8px; font: 700 14px 'Segoe UI', Arial, sans-serif; }
   .xpop canvas { display: block; border: 1px dashed #94a3b8; background: #f8fbff; touch-action: pinch-zoom; cursor: crosshair; }
-  .xpop .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .xpop .row { position: sticky; bottom: 0; display: flex; gap: 8px; align-items: center; margin: 10px -14px -14px; padding: 10px 14px 14px; background: #fff; }
   .xpop .row button { border: none; border-radius: 6px; padding: 8px 14px; font: 600 13px 'Segoe UI', Arial, sans-serif; cursor: pointer; background: #e2e8f0; }
   .xpop .ok { background: #16a34a !important; color: #fff; } .xpop .clr { background: #fee2e2 !important; color: #b91c1c; }
+  @media (max-width:900px), (max-height:700px) {
+    .xpop { align-items: flex-start; }
+    .xpop .box { padding: 10px; }
+    .xpop .row { bottom: 0; margin: 8px -10px -10px; padding: 8px 10px 10px; flex-wrap: wrap; }
+    .xtools.big { gap: 4px; }
+    .xtools.big .tgrp { padding: 2px; }
+    .xtools.big .tgrp button { font-size: 12px; padding: 2px 6px; }
+    .xtools.big .lwl input { width: 72px; }
+  }
   @page { size: A4 landscape; margin: 6mm; }
   @media print {
     body { background: #fff; } .bar, .hint, .bulkzone, .addrow, .pgbar { display: none !important; }
@@ -27361,8 +27532,9 @@ var XLF = (function () {
   }
   function popup(k, i) {
     var z = F.zones[i], d = JSON.parse(JSON.stringify(dget(k, i))); optOf(d, z);
-    var asp = z.h / z.w, W = Math.min(1100, window.innerWidth - 60), H = W * asp;
-    if (H > window.innerHeight - 200) { H = window.innerHeight - 200; W = H / asp; }
+    var vp = window.visualViewport, vw = vp ? vp.width : window.innerWidth, vh = vp ? vp.height : window.innerHeight;
+    var asp = z.h / z.w, maxW = Math.max(160, Math.min(1100, vw - 52)), maxH = Math.max(120, vh - (z.sig ? 190 : 250));
+    var W = Math.min(maxW, maxH / asp), H = W * asp;
     var ov = el('div', 'xpop');
     ov.innerHTML = '<div class="box"><h3>' + (z.sig ? 'Tanda tangan — ' : 'Anotasi — ') + z.label + '</h3>' +
       '<div class="xtools big">' + toolsHTML(z, true) + '</div><canvas></canvas>' +
@@ -27741,15 +27913,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .xtools.big { position: static; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
   .xtools.big .tgrp { padding: 3px 4px; } .xtools.big .tgrp button { font-size: 14px; padding: 3px 8px; }
   .xtools.big .sw { width: 22px; height: 22px; } .xtools.big .spec { width: 24px; height: 24px; } .xtools.big .lwl input { width: 110px; }
-  .xpop { position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,.6); display: flex; align-items: center; justify-content: center; }
-  .xpop .box { background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 14px 44px rgba(0,0,0,.35); }
+  .xpop { position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,.6); display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left)); }
+  .xpop .box { box-sizing: border-box; max-width: 100%; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 14px 44px rgba(0,0,0,.35); }
   .xpop h3 { margin: 0 0 8px; font: 700 14px 'Segoe UI', Arial, sans-serif; }
   .xpop canvas { display: block; border: 1px dashed #94a3b8; background: #f8fbff; touch-action: pinch-zoom; cursor: crosshair; }
   .xpop .crop-stage { max-width:min(1100px,88vw); max-height:65vh; overflow:auto; }
   .xpop .crop-canvas { touch-action:pinch-zoom; cursor:crosshair; }
-  .xpop .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .xpop .row { position: sticky; bottom: 0; display: flex; gap: 8px; align-items: center; margin: 10px -14px -14px; padding: 10px 14px 14px; background: #fff; }
   .xpop .row button { border: none; border-radius: 6px; padding: 8px 14px; font: 600 13px 'Segoe UI', Arial, sans-serif; cursor: pointer; background: #e2e8f0; }
   .xpop .ok { background: #16a34a !important; color: #fff; } .xpop .clr { background: #fee2e2 !important; color: #b91c1c; }
+  @media (max-width:900px), (max-height:700px) {
+    .xpop { align-items: flex-start; }
+    .xpop .box { padding: 10px; }
+    .xpop .row { bottom: 0; margin: 8px -10px -10px; padding: 8px 10px 10px; flex-wrap: wrap; }
+    .xtools.big { gap: 4px; }
+    .xtools.big .tgrp { padding: 2px; }
+    .xtools.big .tgrp button { font-size: 12px; padding: 2px 6px; }
+    .xtools.big .lwl input { width: 72px; }
+  }
   @page { size: A4 landscape; margin: 6mm; }
   @media print {
     body { background: #fff; } .bar, .hint, .phead { display: none !important; }
@@ -28251,8 +28432,9 @@ var XLF = (function () {
   }
   function popup(f, i) {
     var z = SPEC[f].zones[i], d = JSON.parse(JSON.stringify(S[f][i] || blank())); optOf(d, z);
-    var asp = z.h / z.w, W = Math.min(1100, window.innerWidth - 60), H = W * asp;
-    if (H > window.innerHeight - 200) { H = window.innerHeight - 200; W = H / asp; }
+    var vp = window.visualViewport, vw = vp ? vp.width : window.innerWidth, vh = vp ? vp.height : window.innerHeight;
+    var asp = z.h / z.w, maxW = Math.max(160, Math.min(1100, vw - 52)), maxH = Math.max(120, vh - (z.sig ? 190 : 250));
+    var W = Math.min(maxW, maxH / asp), H = W * asp;
     var ov = el('div', 'xpop');
     ov.innerHTML = '<div class="box"><h3>' + (z.sig ? 'Tanda tangan — ' : 'Anotasi — ') + z.label + '</h3>' +
       (z.sig ? '' : '<div class="xtools big">' + toolsHTML(z, true) + '</div>') + '<canvas></canvas>' +
@@ -29733,59 +29915,28 @@ async function dlAll() {
   }
 
 
-  // ================= PAS LAYAR (HP / tablet) =================
-  // Form dirancang untuk layar laptop. Di HP, iframe form dibuat selebar
-  // desktop lalu diskala turun dengan transform, sehingga seluruh kolom
-  // tampil sekaligus dan tata letak sama seperti di laptop. Karena yang
-  // diskala adalah iframe-nya, posisi sentuhan di dalam form (gambar, tanda
-  // tangan, seret) tetap tepat, dan pinch zoom bawaan browser tetap jalan.
-  // Saat editor anotasi / kamera / pop-up terbuka, skala dikembalikan 100%
-  // supaya alatnya tetap besar dan mudah dipakai.
-  var JO_FIT_W = { b: 1100, c: 1000, d: 1220, e: 1220, h: 1150 };
-  var joFitHold = {};
-  // HP (layar sempit + sentuh): default 'normal' -- iframe TIDAK diskala lewat transform.
-  // Iframe selebar 1000-1220px yang diskala ~0.3x lalu di-pinch-zoom memaksa browser HP
-  // merender layer raksasa -> memori habis -> tab dimuat ulang -> kembali ke halaman awal.
-  // Tablet / laptop tetap default 'fit'. Tombol Fit tetap bisa dipakai manual.
-  function joFitDefault() {
-    try {
-      var coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
-      return (coarse && document.documentElement.clientWidth < 700) ? 'normal' : 'fit';
-    } catch (e) { return 'fit'; }
+  var joLayoutMode = 'new';
+  try {
+    joLayoutMode = localStorage.getItem('joFormLayoutMode') ||
+      localStorage.getItem('qcPhotoInspection_layoutMode_v1') ||
+      localStorage.getItem('qcPiling_layoutMode') || 'new';
+  } catch (e) {}
+  function joSyncLayoutMode(code) {
+    var supported = code === 'b' || code === 'd';
+    var control = document.getElementById('joModeControl');
+    var toggle = document.getElementById('joModeToggle');
+    var label = document.getElementById('joModeLabel');
+    if (control) control.hidden = !supported;
+    if (toggle) toggle.checked = joLayoutMode === 'classic';
+    if (label) label.textContent = joLayoutMode === 'classic' ? 'Classic' : 'New';
+    var frame = supported && joFrames[code];
+    if (frame && frame.contentWindow) frame.contentWindow.postMessage({ jo: 'layout-mode', mode: joLayoutMode }, '*');
   }
-  function joFitMode() { try { return localStorage.getItem('joFitModeV2') || joFitDefault(); } catch (e) { return joFitDefault(); } }
-  function joFitApply() {
-    var vw = document.documentElement.clientWidth;
-    var able = joActive && JO_FIT_W[joActive] && vw < JO_FIT_W[joActive] - 20;
-    document.documentElement.classList.toggle('jo-fit-able', !!able);
-    var btn = document.getElementById('joFitBtn');
-    if (btn) btn.classList.toggle('on', joFitMode() === 'fit');
-    Object.keys(joFrames).forEach(function (k) {
-      var f = joFrames[k], W = JO_FIT_W[k], stage = document.getElementById('joStage');
-      var on = W && vw < W - 20 && joFitMode() === 'fit' && !joFitHold[k];
-      if (!on) {
-        f.classList.remove('jo-fit'); f.style.width = f.style.height = f.style.transform = '';
-        return;
-      }
-      var s = vw / W, sh = stage.clientHeight || window.innerHeight;
-      f.classList.add('jo-fit');
-      f.style.width = W + 'px';
-      f.style.height = Math.ceil(sh / s) + 'px';
-      f.style.transform = 'scale(' + s + ')';
-    });
+  function joSetLayoutMode(classic) {
+    joLayoutMode = classic ? 'classic' : 'new';
+    try { localStorage.setItem('joFormLayoutMode', joLayoutMode); } catch (e) {}
+    joSyncLayoutMode(joActive);
   }
-  function joFitToggle() {
-    try { localStorage.setItem('joFitModeV2', joFitMode() === 'fit' ? 'normal' : 'fit'); } catch (e) {}
-    joFitApply();
-  }
-  window.addEventListener('resize', function () { joFitApply(); });
-  window.addEventListener('orientationchange', function () { setTimeout(joFitApply, 300); });
-  window.addEventListener('message', function (ev) {
-    if (!ev.data || ev.data.type !== 'jo-fit-hold') return;
-    Object.keys(joFrames).forEach(function (k) {
-      if (joFrames[k].contentWindow === ev.source) { joFitHold[k] = !!ev.data.active; joFitApply(); }
-    });
-  });
 
   function joOpen(code) {
     if (!JO_FORMS[code]) return;
@@ -29825,7 +29976,7 @@ async function dlAll() {
 
       f.addEventListener('load', function () {
         lo.classList.remove('show');
-        joFitApply();
+        joSyncLayoutMode(code);
         joFocus(code);
       });
     } else {
@@ -29835,8 +29986,8 @@ async function dlAll() {
     document.getElementById('joHelpFloat').style.display = 'none';
     document.getElementById('joTools').style.display = 'none';
     joActive = code;
+    joSyncLayoutMode(code);
     document.title = JO_FORMS[code].label + ' - Form ' + JO_FORMS[code].code;
-    setTimeout(joFitApply, 0);
   }
 
   // Fokuskan ke iframe yang aktif supaya Ctrl+V (tempel foto) langsung
@@ -29851,6 +30002,7 @@ async function dlAll() {
 
   function joHome() {
     document.documentElement.classList.remove('jo-overlay-open');
+    document.getElementById('joModeControl').hidden = true;
     var formSelect = document.getElementById('joFormSelect');
     if (formSelect) formSelect.value = '';
     document.getElementById('joLaunch').style.display = '';
@@ -29866,6 +30018,7 @@ async function dlAll() {
   window.addEventListener('message', function (e) {
     if (e.data && e.data.jo === 'ready') {
       document.getElementById('joLoading').classList.remove('show');
+      joSyncLayoutMode(e.data.form);
     }
   });
 
@@ -30057,6 +30210,11 @@ async function dlAll() {
 </svg>
 </div>
         <div class="tut-cap">Bar atas. Tab yang sedang aktif berwarna penuh; warnanya sama dengan warna judul di dalam modulnya.</div>
+
+        <div class="tut-tip">
+          <b>Tampilan di iPhone/iPad:</b> Gunakan cubit dua jari untuk memperbesar atau memperkecil tampilan.
+          Perkecil untuk melihat lebih banyak kolom sekaligus; jika masih ada kolom di luar layar, geser form ke kiri atau kanan.
+        </div>
 
         <ol>
           <li><b>&#9776; Pilih Form</b> &mdash; balik ke halaman pilihan modul.</li>
