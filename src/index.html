@@ -2244,6 +2244,19 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       margin: 0; padding: 20px; color: #333;
     }
     .container { max-width: 1050px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .photo-layout-switch { display:flex; align-items:center; gap:9px; width:max-content; margin:0 0 12px; padding:6px 10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:20px; color:#475569; font-size:11px; font-weight:700; }
+    .photo-layout-switch input { position:absolute; opacity:0; pointer-events:none; }
+    .photo-layout-switch .track { width:42px; height:22px; padding:2px; border-radius:20px; background:#94a3b8; cursor:pointer; transition:background-color .36s cubic-bezier(.22,1,.36,1); }
+    .photo-layout-switch .track::after { content:''; display:block; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px #0004; transition:transform .36s cubic-bezier(.22,1,.36,1); }
+    .photo-layout-switch input:checked + .track { background:#b91c1c; }
+    .photo-layout-switch input:checked + .track::after { transform:translateX(20px); }
+    .photo-classic-host { display:none; width:100%; height:calc(100vh - 56px); min-height:680px; background:#fff; overflow:auto; }
+    .photo-classic-host iframe { display:block; width:100%; height:100%; min-height:680px; border:0; background:#fff; }
+    .container.photo-classic { max-width:none; margin:0; padding:0; border-radius:0; box-shadow:none; background:#fff; }
+    .container.photo-classic > :not(.photo-layout-switch):not(.photo-classic-host) { display:none !important; }
+    .container.photo-classic > .photo-classic-host { display:block; }
+    body.photo-classic-body { padding:0; background:#fff; background-image:none; }
+    body.photo-classic-body > .btn-help { display:none; }
 
     .brand-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #b91c1c; padding-bottom: 12px; margin-bottom: 20px; }
     .brand-header img { height: 40px; object-fit: contain; }
@@ -2901,7 +2914,13 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   <span class="ico">?</span><span class="label">Cara Pakai</span>
 </button>
 
-<div class="container">
+<div class="container" id="inspectionFormContainer">
+  <div class="photo-layout-switch" title="Beralih antara formulir input New dan layout Excel utuh Classic">
+    <span>Mode tampilan</span>
+    <label><input type="checkbox" id="photoLayoutToggle" onchange="togglePhotoLayout(this.checked)"><span class="track" aria-hidden="true"></span></label>
+    <span id="photoLayoutLabel">New</span><span style="color:#64748b">Classic / New</span>
+  </div>
+  <div class="photo-classic-host" id="photoClassicHost"><iframe src="qp00602b-classic.html" title="QP-006-02 (b) Classic"></iframe></div>
   <div class="brand-header">
     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
       <img id="headerLogoPrev" alt="PT. Jaya Obayashi Logo">
@@ -7035,7 +7054,25 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
     if (e.target.id === 'tutorialModal') closeTutorial();
   });
 
+  // ================= MODE CLASSIC / NEW =================
+  const PHOTO_LAYOUT_KEY = 'qcPhotoInspection_layoutMode_v1';
+  function applyPhotoLayout(mode, remember) {
+    const classic = mode === 'classic';
+    const root = document.getElementById('inspectionFormContainer');
+    const toggle = document.getElementById('photoLayoutToggle');
+    const label = document.getElementById('photoLayoutLabel');
+    if (root) root.classList.toggle('photo-classic', classic);
+    document.body.classList.toggle('photo-classic-body', classic);
+    if (toggle) toggle.checked = classic;
+    if (label) label.textContent = classic ? 'Classic' : 'New';
+    if (remember !== false) { try { localStorage.setItem(PHOTO_LAYOUT_KEY, classic ? 'classic' : 'new'); } catch (e) {} }
+  }
+  function togglePhotoLayout(classic) { applyPhotoLayout(classic ? 'classic' : 'new'); }
+
   // ================= INISIALISASI =================
+  let savedPhotoLayout = 'new';
+  try { savedPhotoLayout = localStorage.getItem(PHOTO_LAYOUT_KEY) || 'new'; } catch (e) {}
+  applyPhotoLayout(savedPhotoLayout, false);
   onQualityChange();
   addSheet({}, { silent: true });
   checkDraftOnLoad();
@@ -26540,6 +26577,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       else if (a === 'cam') bukaKamera(input);
     });
   }
+  window.__joPhotoPick = function (input) { return pilih(input); };
 
   // ---------- timestamp ----------
   function pad(n) { return (n < 10 ? '0' : '') + n; }
