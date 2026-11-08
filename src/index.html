@@ -781,7 +781,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .chart-editor { margin-top: 8px; max-height: 150px; overflow: auto; font: 12px 'Segoe UI',Arial,sans-serif; }
   .chart-editor table { border-collapse: collapse; width: 100%; }
   .chart-editor th,.chart-editor td { border: 1px solid #cbd5e1; padding: 3px 5px; text-align: center; }
-  .chart-editor input { width: 110px; padding: 3px 5px; border: 1px solid #cbd5e1; border-radius: 4px; }
+  .chart-editor input { width: min(110px, 22vw); box-sizing: border-box; padding: 3px 5px; border: 1px solid #cbd5e1; border-radius: 4px; }
   .chart-editor button { padding: 4px 8px; }
   .xpop h3 { margin: 0 0 8px; font: 700 14px 'Segoe UI', Arial, sans-serif; }
   .xpop canvas { display: block; border: 1px dashed #94a3b8; background: #f8fbff; touch-action: pinch-zoom; cursor: crosshair; }
@@ -1549,7 +1549,10 @@ var XLF = (function () {
       var d = getD(), o = optOf(d, z);
       if (b.classList.contains('tl')) { o.t = b.getAttribute('data-t'); var menu=root.querySelector('.eraser-options'); if(menu) { if(o.t==='eraser') menu.classList.toggle('open'); else menu.classList.remove('open'); } }
       else if (b.classList.contains('sw')) o.col = b.getAttribute('data-c');
-      else if (b.getAttribute('data-a') === 'dash') o.dash = !o.dash;
+      else if (b.getAttribute('data-a') === 'dash') {
+        o.dash = !o.dash;
+        if (z.key === 'grafik') o.dashChosen = true;
+      }
       else { act(b.getAttribute('data-a')); return; }
       paintTools(root, d, z); save();
     });
@@ -1652,17 +1655,25 @@ var XLF = (function () {
     }
     x.restore();
   }
-  function drawChart(x, points, w, h) {
-    var valid = (points || []).map(function (p) {
+  function chartData(points, w, h) {
+    var actual = [], planned = [];
+    (points || []).forEach(function (p) {
       var parts = String(p.time || '').split(':');
       var minutes = parts.length === 2 ? (+parts[0] * 60 + +parts[1]) : NaN;
-      var volume = Number(p.volume);
-      return { minutes: minutes, volume: volume, hasVolume: String(p.volume == null ? '' : p.volume).trim() !== '' };
-    }).filter(function (p) { return p.hasVolume && isFinite(p.minutes) && isFinite(p.volume) && p.volume >= 0; })
-      .sort(function (a, b) { return a.minutes - b.minutes; });
+      if (!isFinite(minutes)) return;
+      var actualVolume = p.actualVolume == null ? p.volume : p.actualVolume;
+      var plannedVolume = p.plannedVolume;
+      if (String(actualVolume == null ? '' : actualVolume).trim() !== '' && isFinite(Number(actualVolume)) && Number(actualVolume) >= 0)
+        actual.push({ minutes: minutes, volume: Number(actualVolume) });
+      if (String(plannedVolume == null ? '' : plannedVolume).trim() !== '' && isFinite(Number(plannedVolume)) && Number(plannedVolume) >= 0)
+        planned.push({ minutes: minutes, volume: Number(plannedVolume) });
+    });
+    actual.sort(function (a, b) { return a.minutes - b.minutes; });
+    planned.sort(function (a, b) { return a.minutes - b.minutes; });
+    var valid = actual.concat(planned).sort(function (a, b) { return a.minutes - b.minutes; });
     var L = Math.max(48, w * 0.095), R = Math.max(10, w * 0.025), T = Math.max(16, h * 0.07), B = Math.max(32, h * 0.14);
     var pw = w - L - R, ph = h - T - B;
-    if (pw <= 0 || ph <= 0) return;
+    if (pw <= 0 || ph <= 0) return null;
     var first = valid.length ? valid[0].minutes : 8 * 60;
     var last = valid.length ? valid[valid.length - 1].minutes : 16 * 60;
     var minX = Math.max(0, Math.floor(first / 60) * 60 - 60);
@@ -1672,6 +1683,46 @@ var XLF = (function () {
     var rawStep = Math.max(1, maxV / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
     var norm = rawStep / mag, nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
     var yStep = nice * mag, maxY = Math.max(yStep * 5, Math.ceil(maxV / yStep) * yStep);
+    return { actual: actual, planned: planned, L: L, T: T, pw: pw, ph: ph, minX: minX, maxX: maxX, maxY: maxY };
+  }
+  function chartLineHit(points, series, px, py, w, h) {
+    var g = chartData(points, w, h);
+    if (!g || g[series].length < 2) return false;
+    var prev = null;
+    for (var i = 0; i < g[series].length; i++) {
+      var p = g[series][i];
+      var point = [
+        g.L + (p.minutes - g.minX) / (g.maxX - g.minX) * g.pw,
+        g.T + g.ph - p.volume / g.maxY * g.ph
+      ];
+      if (prev) {
+        var dx = point[0] - prev[0], dy = point[1] - prev[1];
+        var length2 = dx * dx + dy * dy;
+        var t = length2 ? Math.max(0, Math.min(1, ((px - prev[0]) * dx + (py - prev[1]) * dy) / length2)) : 0;
+        if (Math.hypot(px - (prev[0] + t * dx), py - (prev[1] + t * dy)) <= 12) return true;
+      }
+      prev = point;
+    }
+    return false;
+  }
+  function strokeLineHit(st, px, py, w, h) {
+    var points = st.t === 'pen' ? st.p : st.t === 'line' ? [st.a, st.b] : null;
+    if (!points || points.length < 2) return false;
+    for (var i = 1; i < points.length; i++) {
+      var a = points[i - 1], b = points[i];
+      if (!a || !b) continue;
+      var ax = a[0] * w, ay = a[1] * h, dx = (b[0] - a[0]) * w, dy = (b[1] - a[1]) * h;
+      var length2 = dx * dx + dy * dy;
+      var t = length2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / length2)) : 0;
+      if (Math.hypot(px - (ax + t * dx), py - (ay + t * dy)) <= 12) return true;
+    }
+    return false;
+  }
+  function drawChart(x, points, w, h, actualColor, plannedColor) {
+    var g = chartData(points, w, h);
+    if (!g) return;
+    var L = g.L, T = g.T, pw = g.pw, ph = g.ph;
+    var minX = g.minX, maxX = g.maxX, maxY = g.maxY;
     x.save(); x.font = Math.max(9, Math.min(12, w / 65)) + 'px Arial'; x.lineWidth = 1;
     x.strokeStyle = 'rgba(71,85,105,.38)'; x.fillStyle = '#334155'; x.setLineDash([2, 3]);
     for (var yi = 0; yi <= 5; yi++) {
@@ -1690,8 +1741,10 @@ var XLF = (function () {
     x.textAlign = 'center'; x.textBaseline = 'bottom'; x.font = 'bold ' + Math.max(10, Math.min(13, w / 58)) + 'px Arial';
     x.fillText('Jam', L + pw / 2, h - 1);
     x.save(); x.translate(12, T + ph / 2); x.rotate(-Math.PI / 2); x.fillText('Volume (m³)', 0, 0); x.restore();
-    if (valid.length) {
-      x.strokeStyle = '#dc2626'; x.fillStyle = '#dc2626'; x.lineWidth = Math.max(2, w / 250);
+    function drawSeries(valid, color, dashed) {
+      if (!valid.length) return;
+      x.strokeStyle = color; x.fillStyle = color; x.lineWidth = Math.max(2, w / 250);
+      x.setLineDash(dashed ? [8, 6] : []);
       x.beginPath();
       valid.forEach(function (p, i) {
         var px = L + (p.minutes - minX) / (maxX - minX) * pw;
@@ -1705,6 +1758,21 @@ var XLF = (function () {
         x.beginPath(); x.arc(px, py, Math.max(3, w / 180), 0, Math.PI * 2); x.fill();
       });
     }
+    drawSeries(g.planned, plannedColor || '#2563eb', true);
+    drawSeries(g.actual, actualColor || '#dc2626', false);
+    x.setLineDash([]);
+    if (g.actual.length || g.planned.length) {
+      x.font = 'bold ' + Math.max(10, Math.min(13, w / 58)) + 'px Arial';
+      x.textAlign = 'left'; x.textBaseline = 'top';
+      var legendX = L + 8, legendY = T + 6;
+      if (g.actual.length) {
+        x.fillStyle = actualColor || '#dc2626'; x.fillText('Aktual', legendX, legendY);
+        legendY += Math.max(14, w / 55);
+      }
+      if (g.planned.length) {
+        x.fillStyle = plannedColor || '#2563eb'; x.fillText('Rencana', legendX, legendY);
+      }
+    }
     x.restore();
   }
   function render(cv, d, z, cssW, cssH, cb) {
@@ -1713,7 +1781,7 @@ var XLF = (function () {
       x.clearRect(0, 0, w, h);
       if (im) { var r = Math.min(w / im.naturalWidth, h / im.naturalHeight), iw = im.naturalWidth * r, ih = im.naturalHeight * r;
                 x.drawImage(im, (w - iw) / 2, (h - ih) / 2, iw, ih); }
-      if (z.key === 'grafik' && !d.img) drawChart(x, d.chartPoints || [], w, h);
+      if (z.key === 'grafik' && !d.img) drawChart(x, d.chartPoints || [], w, h, d.chartColor, d.plannedChartColor);
       d.strokes.forEach(function (st) {
         if (!st.t && st.lw == null) st = { c: st.c, p: st.p || st, lw: z.sig ? 1.9 : 1.5 };
         drawShape(x, st, w, h, scale);
@@ -1788,6 +1856,7 @@ var XLF = (function () {
     var isChart = z.key === 'grafik';
     if (isChart && !Array.isArray(d.chartPoints)) d.chartPoints = [];
     optOf(d, z);
+    if (isChart && !d.opt.dashChosen) d.opt.dash = true;
     var asp = z.h / z.w, W, H;
     function popupSize() {
       W = Math.max(280, Math.min(1100, window.innerWidth - 60));
@@ -1798,7 +1867,7 @@ var XLF = (function () {
     var ov = el('div', 'xpop');
     ov.innerHTML = '<div class="box' + (isChart ? ' chart-box' : '') + '"><h3>' + (z.sig ? 'Tanda tangan — ' : 'Anotasi — ') + z.label + '</h3>' +
       '<div class="xtools big">' + toolsHTML(z, true, f) + '</div><canvas></canvas>' +
-      (isChart ? '<div class="chart-editor"><table><thead><tr><th>No.</th><th>Jam (X)</th><th>Volume m³ (Y)</th><th></th></tr></thead><tbody></tbody></table><button type="button" class="chart-add">+ Tambah titik</button><small> Isi waktu dan volume tiap titik; grafik akan mengikuti data tersebut.</small></div>' : '') +
+      (isChart ? '<div class="chart-editor"><table><thead><tr><th>No.</th><th>Jam</th><th>Volume aktual (m³)</th><th>Volume rencana (m³)</th><th></th></tr></thead><tbody></tbody></table><button type="button" class="chart-add">+ Tambah titik</button><small>Aktual ditampilkan sebagai garis tegas dan rencana sebagai garis putus-putus. Klik masing-masing garis untuk memilih warna.</small></div>' : '') +
       '<div class="row"><button type="button" class="clr">Hapus semua</button>' +
       (z.sig ? '<button type="button" class="und">↶ Undo</button>' : '') + '<span style="flex:1"></span>' +
       '<button type="button" class="no">Batal</button><button type="button" class="ok">✓ Simpan</button></div></div>';
@@ -1814,13 +1883,49 @@ var XLF = (function () {
     size(cv, W, H);
     // tebal garis di pop-up mengikuti skala, jadi hasilnya sama dengan di kotak kecil
     function paint() { render(cv, d, z, W, H); }
+    var chartColorPicker = null;
+    function chooseChartColor(hit) {
+      if (!chartColorPicker) {
+        chartColorPicker = document.createElement('input');
+        chartColorPicker.type = 'color';
+        chartColorPicker.setAttribute('aria-label', 'Warna garis grafik');
+        chartColorPicker.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+        ov.appendChild(chartColorPicker);
+      }
+      chartColorPicker.value = hit.stroke
+        ? (d.strokes[hit.index].col || optOf(d, z).col || '#ff7a00')
+        : (hit.series === 'planned' ? (d.plannedChartColor || '#2563eb') : (d.chartColor || '#dc2626'));
+      chartColorPicker.oninput = function () {
+        if (hit.stroke) d.strokes[hit.index].col = chartColorPicker.value;
+        else if (hit.series === 'planned') d.plannedChartColor = chartColorPicker.value;
+        else d.chartColor = chartColorPicker.value;
+        paint();
+      };
+      if (chartColorPicker.showPicker) {
+        try { chartColorPicker.showPicker(); } catch (e) { chartColorPicker.click(); }
+      } else chartColorPicker.click();
+    }
+    if (isChart) cv.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      var rect = cv.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+      var hit = null;
+      for (var n = d.strokes.length - 1; n >= 0; n--) {
+        if (strokeLineHit(d.strokes[n], x, y, rect.width, rect.height)) { hit = { stroke: true, index: n }; break; }
+      }
+      if (!hit && !d.img && chartLineHit(d.chartPoints, 'planned', x, y, rect.width, rect.height)) hit = { stroke: false, series: 'planned' };
+      if (!hit && !d.img && chartLineHit(d.chartPoints, 'actual', x, y, rect.width, rect.height)) hit = { stroke: false, series: 'actual' };
+      if (!hit) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      chooseChartColor(hit);
+    }, true);
     if (isChart) {
       var body = ov.querySelector('.chart-editor tbody');
       function drawRows() {
         body.innerHTML = '';
         d.chartPoints.forEach(function (p, n) {
           var tr = document.createElement('tr');
-          tr.innerHTML = '<td>' + (n + 1) + '</td><td><input type="time" value="' + xesc(p.time || '') + '" data-field="time"></td><td><input type="number" min="0" step="any" value="' + xesc(p.volume == null ? '' : p.volume) + '" data-field="volume"></td><td><button type="button" data-remove="' + n + '">Hapus</button></td>';
+          var actualVolume = p.actualVolume == null ? p.volume : p.actualVolume;
+          tr.innerHTML = '<td>' + (n + 1) + '</td><td><input type="time" value="' + xesc(p.time || '') + '" data-field="time"></td><td><input type="number" min="0" step="any" value="' + xesc(actualVolume == null ? '' : actualVolume) + '" data-field="actualVolume"></td><td><input type="number" min="0" step="any" value="' + xesc(p.plannedVolume == null ? '' : p.plannedVolume) + '" data-field="plannedVolume"></td><td><button type="button" data-remove="' + n + '">Hapus</button></td>';
           body.appendChild(tr);
         });
         body.querySelectorAll('input').forEach(function (input) { input.addEventListener('input', function () {
@@ -1831,7 +1936,7 @@ var XLF = (function () {
           d.chartPoints.splice(+button.dataset.remove, 1); drawRows(); paint();
         }); });
       }
-      ov.querySelector('.chart-add').onclick = function () { d.chartPoints.push({ time: '', volume: '' }); drawRows(); };
+      ov.querySelector('.chart-add').onclick = function () { d.chartPoints.push({ time: '', actualVolume: '', plannedVolume: '' }); drawRows(); };
       drawRows();
     }
     paint();
@@ -1905,16 +2010,6 @@ var XLF = (function () {
     var sel = document.getElementById('sel-' + f); if (sel) sel.value = s;
     fit(); save();
   }
-  function sheetHasData(f, s) {
-    var st = S[f] && S[f][s]; if (!st) return false;
-    return SPEC[f].sheets[s].zones.some(function (z, i) {
-      var v = st[i]; if (v == null) return false;
-      if (z.type === 'draw') return !!(v.strokes && v.strokes.length || v.img || (v.chartPoints && v.chartPoints.length));
-      if (z.type === 'pre') return String(v).trim() !== String(z.init).trim();
-      return String(v).trim() !== '';
-    });
-  }
-
   /* ---------------- skala tampilan ---------------- */
   function fit() {
     document.querySelectorAll('.fitbox').forEach(function (fb) {
@@ -2015,11 +2110,72 @@ var XLF = (function () {
     });
   }
 
+  function setXmlAttr(tag, name, value) {
+    var re = new RegExp('\\s+' + name + '="[^"]*"');
+    return re.test(tag) ? tag.replace(re, ' ' + name + '="' + value + '"')
+                        : tag.replace(/(\/?>)$/, ' ' + name + '="' + value + '"$1');
+  }
+
+  async function keepOnlyActiveSheet(zip, activeIndex, sheets) {
+    var wb = await zip.file('xl/workbook.xml').async('string');
+    var sheetNodes = wb.match(/<sheet\b[^>]*(?:\/>|>[\s\S]*?<\/sheet>)/g) || [];
+    var activeNode = sheetNodes[activeIndex];
+    if (!activeNode) throw new Error('Sheet aktif tidak ditemukan pada workbook.');
+
+    activeNode = activeNode.replace(/\s+state="[^"]*"/, '');
+    activeNode = setXmlAttr(activeNode, 'sheetId', '1');
+    var ridMatch = activeNode.match(/\br:id="([^"]+)"/);
+    if (!ridMatch) throw new Error('Relasi sheet aktif tidak ditemukan pada workbook.');
+    var activeRid = ridMatch[1];
+    var activeXml = await zip.file(sheets[activeIndex].sheet).async('string');
+    activeXml = activeXml.replace(/<sheetView\b[^>]*>/, function (tag) { return setXmlAttr(tag, 'tabSelected', '1'); });
+    zip.file(sheets[activeIndex].sheet, activeXml);
+    wb = wb.replace(/<sheets>[\s\S]*?<\/sheets>/, '<sheets>' + activeNode + '</sheets>');
+    wb = wb.replace(/<workbookView\b[^>]*\/>/, function (tag) {
+      return setXmlAttr(setXmlAttr(tag, 'activeTab', '0'), 'firstSheet', '0');
+    });
+    wb = wb.replace(/<definedNames>([\s\S]*?)<\/definedNames>/, function (_, body) {
+      var names = [];
+      body.replace(/<definedName\b([^>]*)>([\s\S]*?)<\/definedName>/g, function (node, attrs) {
+        var local = attrs.match(/\blocalSheetId="(\d+)"/);
+        if (local && +local[1] !== activeIndex) return '';
+        if (local) node = node.replace(/\blocalSheetId="\d+"/, 'localSheetId="0"');
+        names.push(node);
+        return node;
+      });
+      return names.length ? '<definedNames>' + names.join('') + '</definedNames>' : '';
+    });
+    zip.file('xl/workbook.xml', wb);
+
+    var relPath = 'xl/_rels/workbook.xml.rels';
+    var rels = await zip.file(relPath).async('string');
+    rels = rels.replace(/<Relationship\b[^>]*(?:\/>|>[\s\S]*?<\/Relationship>)/g, function (rel) {
+      if (!/Type="[^"]*\/worksheet"/.test(rel)) return rel;
+      var id = rel.match(/\bId="([^"]+)"/);
+      return id && id[1] === activeRid ? rel : '';
+    });
+    zip.file(relPath, rels);
+
+    var contentPath = '[Content_Types].xml';
+    var contentTypes = await zip.file(contentPath).async('string');
+    var activePart = '/' + sheets[activeIndex].sheet;
+    for (var i = 0; i < sheets.length; i++) {
+      if (i === activeIndex) continue;
+      var path = sheets[i].sheet, file = path.slice(path.lastIndexOf('/') + 1);
+      zip.remove(path);
+      zip.remove('xl/worksheets/_rels/' + file + '.rels');
+    }
+    contentTypes = contentTypes.replace(/<Override\b[^>]*PartName="\/xl\/worksheets\/sheet\d+\.xml"[^>]*\/>/g, function (entry) {
+      return entry.indexOf('PartName="' + activePart + '"') >= 0 ? entry : '';
+    });
+    zip.file(contentPath, contentTypes);
+  }
+
   async function exportForm(f) {
     if (typeof JSZip === 'undefined') throw new Error('Pustaka JSZip tidak termuat.');
     var F = SPEC[f], zip = await JSZip.loadAsync(F.tpl, { base64: true });
     var ctx = { st: await zip.file('xl/styles.xml').async('string') }, wrap = wrapper(ctx);
-    var include = F.sheets.map(function (sh, s) { return F.sheets.length === 1 || s === ACT[f] || sheetHasData(f, s); });
+    var include = F.sheets.map(function (sh, s) { return F.sheets.length === 1 || s === ACT[f]; });
     var imgN = 0;
     for (var s = 0; s < F.sheets.length; s++) {
       if (!include[s]) continue;
@@ -2073,24 +2229,30 @@ var XLF = (function () {
       }
     }
     zip.file('xl/styles.xml', ctx.st);
+    if (f === 'd') {
+      var dSheet = F.sheets[0], dx = await zip.file(dSheet.sheet).async('string');
+      dx = dx.replace(/<pageSetup\b[^>]*\/>/, function (tag) {
+        tag = tag.replace(/\s+scale="[^"]*"/, '');
+        tag = setXmlAttr(setXmlAttr(tag, 'fitToWidth', '1'), 'fitToHeight', '1');
+        return tag;
+      });
+      dx = dx.replace(/<sheetView\b[^>]*>/, function (tag) {
+        tag = setXmlAttr(setXmlAttr(tag, 'view', 'normal'), 'topLeftCell', 'A1');
+        tag = setXmlAttr(tag, 'zoomScale', '60');
+        tag = tag.replace(/\s+zoomScale(?:SheetLayoutView|PageLayoutView)="[^"]*"/g, '');
+        return tag;
+      });
+      dx = dx.replace(/<selection\b[^>]*\/>/, function (tag) {
+        return setXmlAttr(setXmlAttr(tag, 'activeCell', 'A1'), 'sqref', 'A1');
+      });
+      zip.file(dSheet.sheet, dx);
+    }
     // pastikan tipe PNG terdaftar
     var ct = await zip.file('[Content_Types].xml').async('string');
     if (!/Extension="png"/i.test(ct)) zip.file('[Content_Types].xml', ct.replace('<Types ', '<Types ').replace(/(<Types[^>]*>)/, '$1<Default Extension="png" ContentType="image/png"/>'));
-    // Rebar Checklist: sheet yang tidak diisi disembunyikan, sheet pilihan jadi aktif
+    // Export only the Rebar Checklist sheet currently shown in the form.
     if (F.sheets.length > 1) {
-      var wb = await zip.file('xl/workbook.xml').async('string'), k2 = -1;
-      wb = wb.replace(/<sheet ([^>]*?)\/>/g, function (m, a) {
-        k2++; a = a.replace(/\s*state="[^"]*"/, '');
-        return include[k2] ? '<sheet ' + a + '/>' : '<sheet ' + a + ' state="hidden"/>';
-      });
-      wb = wb.replace(/(<workbookView[^>]*?)(\s+activeTab="\d+")?(\s+firstSheet="\d+")?(\s*\/?>)/, '$1 activeTab="' + ACT[f] + '" firstSheet="' + ACT[f] + '"$4');
-      zip.file('xl/workbook.xml', wb);
-      for (var s2 = 0; s2 < F.sheets.length; s2++) {
-        var p2 = F.sheets[s2].sheet, x2 = await zip.file(p2).async('string');
-        x2 = x2.replace(/\s+tabSelected="1"/g, '');
-        if (s2 === ACT[f]) x2 = x2.replace('<sheetView ', '<sheetView tabSelected="1" ');
-        zip.file(p2, x2);
-      }
+      await keepOnlyActiveSheet(zip, ACT[f], F.sheets);
     }
     var blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', compression: 'DEFLATE' });
     var tgl = new Date().toISOString().slice(0, 10);
@@ -2265,6 +2427,26 @@ function setXmlAttribute(tag, name, value) {
   if (re.test(tag)) return tag.replace(re, '$1' + value + '$2');
   return tag.replace(/\/?>$/, function (end) { return ' ' + name + '="' + value + '"' + end; });
 }
+function addPrintAreaNames(workbook, sourceWorkbook, sheetName, sheetIndex) {
+  var sourceNames = sourceWorkbook.match(/<definedName\b[^>]*>[\s\S]*?<\/definedName>/g) || [], names = [];
+  sourceNames.forEach(function (node) {
+    var attrs = node.match(/^<definedName\b([^>]*)>/), local = attrs && attrs[1].match(/\blocalSheetId="(\d+)"/);
+    if (!attrs || !/\bname="_xlnm\.Print_Area"/.test(attrs[1]) || !local || +local[1] !== 0) return;
+    var body = node.match(/>([\s\S]*?)<\/definedName>/);
+    if (!body || body[1].indexOf('!') < 0) return;
+    var escapedName = "'" + sheetName.replace(/'/g, "''") + "'";
+    node = setXmlAttribute(node, 'localSheetId', String(sheetIndex));
+    node = node.replace(/>([\s\S]*?)<\/definedName>/, function (_, value) {
+      return '>' + escapedName + value.slice(value.indexOf('!')) + '</definedName>';
+    });
+    names.push(node);
+  });
+  if (!names.length) return workbook;
+  if (/<definedNames>/.test(workbook)) return workbook.replace('</definedNames>', names.join('') + '</definedNames>');
+  var block = '<definedNames>' + names.join('') + '</definedNames>';
+  return /<calcPr\b/.test(workbook) ? workbook.replace(/<calcPr\b/, block + '<calcPr')
+                                    : workbook.replace('</workbook>', block + '</workbook>');
+}
 function remapWorksheet(xml, styleMap, sharedMap) {
   xml = xml.replace(/<(?:row|col)\b[^>]*>/g, function (tag) {
     var attr = tag.indexOf('<row') === 0 ? 's' : 'style', oldStyle = xmlAttr(tag, attr);
@@ -2273,12 +2455,13 @@ function remapWorksheet(xml, styleMap, sharedMap) {
     if (newStyle == null) throw new Error('Gaya baris/kolom tidak ditemukan: ' + oldStyle);
     return setXmlAttribute(tag, attr, newStyle);
   });
-  return xml.replace(/<c\b[^>]*(?:\/>|>[\s\S]*?<\/c>)/g, function (cell) {
+  return xml.replace(/<c\b[^>]*?\/>|<c\b[^>]*>[\s\S]*?<\/c>/g, function (cell) {
     var end = cell.indexOf('>'), openTag = cell.slice(0, end + 1);
-    if (/\/>$/.test(openTag)) return cell;
     var oldStyle = xmlAttr(openTag, 's') || '0', newStyle = styleMap[+oldStyle];
     if (newStyle == null) throw new Error('Gaya sel tidak ditemukan: ' + oldStyle);
-    cell = setXmlAttribute(openTag, 's', newStyle) + cell.slice(end + 1);
+    openTag = setXmlAttribute(openTag, 's', newStyle);
+    if (/\/>$/.test(openTag)) return openTag;
+    cell = openTag + cell.slice(end + 1);
     if (xmlAttr(openTag, 't') === 's') {
       var value = cell.match(/<v>(\d+)<\/v>/);
       if (!value || sharedMap[+value[1]] == null) throw new Error('Teks bersama tidak ditemukan pada indeks ' + (value ? value[1] : '?'));
@@ -2288,11 +2471,11 @@ function remapWorksheet(xml, styleMap, sharedMap) {
   });
 }
 async function mergeExcelWorkbooks(results) {
-  var base = await JSZip.loadAsync(await results[0].blob.arrayBuffer());
+  var base = await JSZip.loadAsync(await results[2].blob.arrayBuffer());
   var workbook = await base.file('xl/workbook.xml').async('string');
   var workbookRels = await base.file('xl/_rels/workbook.xml.rels').async('string');
   var contentTypes = await base.file('[Content_Types].xml').async('string');
-  var sheetId = 1, sheetNo = 1, relNo = 1, drawingNo = 1, imageNo = 1;
+  var sheetId = 1, sheetNo = 1, relNo = 1, drawingNo = 1, imageNo = 1, vmlNo = 1, commentsNo = 1;
   var m;
   m = workbook.match(/<sheet[^>]*\bsheetId="(\d+)"/g);
   if (m) sheetId = Math.max.apply(null, m.map(function (v) { return +v.match(/sheetId="(\d+)"/)[1]; })) + 1;
@@ -2300,9 +2483,11 @@ async function mergeExcelWorkbooks(results) {
   m = workbookRels.match(/Id="rId(\d+)"/g);
   if (m) relNo = Math.max.apply(null, m.map(function (v) { return +v.match(/rId(\d+)/)[1]; })) + 1;
   while (base.file('xl/drawings/drawing' + drawingNo + '.xml')) drawingNo++;
-  var sourceLabels = ['QP-006-06(c)', 'QP-006-08(d)'];
-  for (var fi = 1; fi < results.length; fi++) {
-    var src = await JSZip.loadAsync(await results[fi].blob.arrayBuffer());
+  while (base.file('xl/drawings/vmlDrawingMerge' + vmlNo + '.vml')) vmlNo++;
+  while (base.file('xl/commentsMerge' + commentsNo + '.xml')) commentsNo++;
+  var sourceIndexes = [0, 1], sourceLabels = ['QP-006-08(a)', 'QP-006-06(c)'];
+  for (var fi = 0; fi < sourceIndexes.length; fi++) {
+    var src = await JSZip.loadAsync(await results[sourceIndexes[fi]].blob.arrayBuffer());
     var sharedMap = await mergeSharedStrings(base, src);
     var styleMap = await mergeWorkbookStyles(base, src);
     var swb = await src.file('xl/workbook.xml').async('string');
@@ -2317,6 +2502,9 @@ async function mergeExcelWorkbooks(results) {
       if (!oldSheet) continue;
       var newSheetPath = 'xl/worksheets/sheet' + sheetNo++ + '.xml';
       var newSheetXml = remapWorksheet(await oldSheet.async('string'), styleMap, sharedMap);
+      newSheetXml = newSheetXml.replace(/<sheetView\b[^>]*>/, function (tag) {
+        return tag.replace(/\s+tabSelected="[^"]*"/, '');
+      });
       base.file(newSheetPath, newSheetXml);
       var newSheetRelsPath = 'xl/worksheets/_rels/' + fileName(newSheetPath) + '.rels';
       var oldSheetRelsPath = 'xl/worksheets/_rels/' + fileName(oldSheetPath) + '.rels';
@@ -2335,17 +2523,36 @@ async function mergeExcelWorkbooks(results) {
           base.file(newPrinterPath, await printerSettings.async('uint8array'));
           sr = sr.replace(printerRel, printerRel.replace(/Target="[^"]*"/, 'Target="../printerSettings/' + fileName(newPrinterPath) + '"'));
         }
-        sr = sr.replace(/<Relationship\b[^>]*\/?>(?:<\/Relationship>)?/g, function (rel) {
+        var sheetRels = sr.match(/<Relationship\b[^>]*\/?>(?:<\/Relationship>)?/g) || [];
+        for (var sri = 0; sri < sheetRels.length; sri++) {
+          var rel = sheetRels[sri], replacement = rel;
           var target = xmlAttr(rel, 'Target');
-          if (!target || xmlAttr(rel, 'TargetMode') === 'External') return rel;
-          var oldTargetPath = zipPath(oldSheetPath.slice(0, oldSheetPath.lastIndexOf('/')), target);
-          if (/drawing/i.test(xmlAttr(rel, 'Type'))) {
-            var newDrawingPath = 'xl/drawings/drawing' + drawingNo++ + '.xml';
-            drawings.push({ oldPath: oldTargetPath, newPath: newDrawingPath });
-            return rel.replace(/Target="[^"]*"/, 'Target="../drawings/' + fileName(newDrawingPath) + '"');
+          if (target && xmlAttr(rel, 'TargetMode') !== 'External') {
+            var oldTargetPath = zipPath(oldSheetPath.slice(0, oldSheetPath.lastIndexOf('/')), target);
+            var type = xmlAttr(rel, 'Type');
+            if (/\/drawing$/.test(type)) {
+              var newDrawingPath = 'xl/drawings/drawing' + drawingNo++ + '.xml';
+              drawings.push({ oldPath: oldTargetPath, newPath: newDrawingPath });
+              replacement = rel.replace(/Target="[^"]*"/, 'Target="../drawings/' + fileName(newDrawingPath) + '"');
+            } else if (/\/vmlDrawing$/.test(type)) {
+              var newVmlPath = 'xl/drawings/vmlDrawingMerge' + vmlNo++ + '.vml';
+              var vmlDrawing = src.file(oldTargetPath);
+              if (!vmlDrawing) throw new Error('VML drawing tidak ditemukan: ' + oldTargetPath);
+              base.file(newVmlPath, await vmlDrawing.async('uint8array'));
+              if (!/<Default\b[^>]*Extension="vml"/i.test(contentTypes))
+                contentTypes = contentTypes.replace(/(<Types\b[^>]*>)/, '$1<Default Extension="vml" ContentType="application/vnd.openxmlformats-officedocument.vmlDrawing"/>');
+              replacement = rel.replace(/Target="[^"]*"/, 'Target="../drawings/' + fileName(newVmlPath) + '"');
+            } else if (/\/comments$/.test(type)) {
+              var newCommentsPath = 'xl/commentsMerge' + commentsNo++ + '.xml';
+              var comments = src.file(oldTargetPath);
+              if (!comments) throw new Error('Comments tidak ditemukan: ' + oldTargetPath);
+              base.file(newCommentsPath, await comments.async('uint8array'));
+              contentTypes = contentTypes.replace('</Types>', '<Override PartName="/' + newCommentsPath + '" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"/></Types>');
+              replacement = rel.replace(/Target="[^"]*"/, 'Target="../' + fileName(newCommentsPath) + '"');
+            }
           }
-          return rel;
-        });
+          if (replacement !== rel) sr = sr.replace(rel, replacement);
+        }
         base.file(newSheetRelsPath, sr);
         for (var di = 0; di < drawings.length; di++) {
           var dr = drawings[di], drawing = src.file(dr.oldPath);
@@ -2374,16 +2581,40 @@ async function mergeExcelWorkbooks(results) {
           base.file(newDrawingRelsPath, drs);
         }
       }
-      var label = sourceLabels[fi - 1] + (oldName ? ' - ' + oldName : '');
+      var label = sourceLabels[fi] + (oldName ? ' - ' + oldName : '');
       label = label.slice(0, 31);
       var unique = label, suffix = 2;
       while (workbook.indexOf('name="' + xmlEscape(unique) + '"') >= 0) unique = (label.slice(0, 27) + ' (' + suffix++ + ')').slice(0, 31);
+      var targetSheetIndex = (workbook.match(/<sheet\b[^>]*\/>/g) || []).length;
       var newRid = 'rId' + relNo++;
       workbook = workbook.replace('</sheets>', '<sheet name="' + xmlEscape(unique) + '" sheetId="' + sheetId++ + '" r:id="' + newRid + '"/></sheets>');
+      workbook = addPrintAreaNames(workbook, swb, unique, targetSheetIndex);
       workbookRels = workbookRels.replace('</Relationships>', '<Relationship Id="' + newRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/' + fileName(newSheetPath) + '"/></Relationships>');
       contentTypes = contentTypes.replace('</Types>', '<Override PartName="/' + newSheetPath + '" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
     }
   }
+  var sheetNodes = workbook.match(/<sheet\b[^>]*\/>/g) || [];
+  function sheetOrder(node) {
+    var name = xmlAttr(node, 'name');
+    if (/QP-006-08\s*\(a\)/i.test(name)) return 0;
+    if (/QP-006-06\s*\(c\)/i.test(name)) return 1;
+    if (/QP-006-08\s*\(d\)/i.test(name)) return 2;
+    return 3;
+  }
+  sheetNodes.sort(function (a, b) { return sheetOrder(a) - sheetOrder(b); });
+  workbook = workbook.replace(/<sheets>[\s\S]*?<\/sheets>/, '<sheets>' + sheetNodes.join('') + '</sheets>');
+  var sheetIndexes = {};
+  sheetNodes.forEach(function (node, index) { sheetIndexes[xmlAttr(node, 'name')] = index; });
+  workbook = workbook.replace(/<definedName\b([^>]*)>([\s\S]*?)<\/definedName>/g, function (node, attrs, value) {
+    if (!/\bname="_xlnm\.Print_Area"/.test(attrs) || /#REF!/.test(value)) return /#REF!/.test(value) ? '' : node;
+    var ref = value.match(/^'((?:[^']|'')+)'!/);
+    if (!ref) return node;
+    var name = ref[1].replace(/''/g, "'"), index = sheetIndexes[name];
+    return index == null ? node : setXmlAttribute(node, 'localSheetId', String(index));
+  });
+  workbook = workbook.replace(/<workbookView\b[^>]*>/, function (tag) {
+    return setXmlAttribute(tag, 'activeTab', String(sheetNodes.length - 1));
+  });
   base.file('xl/workbook.xml', workbook);
   base.file('xl/_rels/workbook.xml.rels', workbookRels);
   base.file('[Content_Types].xml', contentTypes);
@@ -2594,6 +2825,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       display: flex; align-items: center; justify-content: center; text-align: center;
       padding: 4px 2px; gap: 3px; flex-wrap: wrap; border-right: 1px solid #cbd5e1;
     }
+    .inf-row:first-child .inf-lbl { font-size: 7.5px; white-space: nowrap; flex-wrap: nowrap; gap: 0; }
     .inf-val { padding: 4px; }
     .inf-val input, .inf-val select {
       width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1;
@@ -29806,6 +30038,18 @@ async function dlAll() {
       var okSrc = Object.keys(joFrames).some(function (k) { return joFrames[k].contentWindow === event.source; });
       if (elc && okSrc) {
         var htmlc = elc.textContent.replace(/<\\(\\*)\/script/g, function (a, s2) { return '<' + s2 + '/script'; });
+        if (kc === 'qp00602b') {
+          htmlc = htmlc.replace(/<td rowspan="4"[^>]*>INSPECTOR<\/td>/g, function (cell) {
+            return cell.replace('font-size:14.67px;', 'font-size:10.67px;').replace('white-space:normal;', 'white-space:nowrap;');
+          });
+        }
+        if (kc === 'qp00605') {
+          var camc = document.getElementById('joCamTpl');
+          var headEnd = htmlc.search(/<\/head>/i);
+          if (camc && headEnd > -1) {
+            htmlc = htmlc.slice(0, headEnd) + '<scr' + 'ipt>' + camc.textContent + '</scr' + 'ipt>' + htmlc.slice(headEnd);
+          }
+        }
         event.source.postMessage({ type: 'jo-classic-html', key: kc, html: htmlc }, '*');
       }
       return;
@@ -29910,7 +30154,10 @@ async function dlAll() {
       'function ask(f){if(f.__joAsked)return;f.__joAsked=1;' +
         'window.parent.postMessage({type:"jo-classic-need",key:f.getAttribute("data-jo-classic")},"*");}' +
       'window.addEventListener("message",function(e){' +
-        'var d=e.data;if(!d||d.type!=="jo-classic-html")return;' +
+        'var d=e.data;if(d&&d.type==="jo-overlay"&&typeof d.active==="boolean"){' +
+          'for(var j=0;j<fr.length;j++)if(fr[j].contentWindow===e.source){window.parent.postMessage(d,"*");return;}' +
+        '}' +
+        'if(!d||d.type!=="jo-classic-html")return;' +
         'for(var i=0;i<fr.length;i++)if(fr[i].getAttribute("data-jo-classic")===d.key&&!fr[i].srcdoc)fr[i].srcdoc=d.html;});' +
       'Array.prototype.forEach.call(fr,function(f){' +
         'if(window.ResizeObserver){var ro=new ResizeObserver(function(){if(f.offsetWidth>0&&f.offsetHeight>0){ask(f);ro.disconnect();}});ro.observe(f);}' +
