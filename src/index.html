@@ -351,7 +351,7 @@
   }
 
   /* ===== PANGGUNG IFRAME ===== */
-  .jo-stage { flex: 1; position: relative; min-height: 0; }
+  .jo-stage { flex: 1; position: relative; min-height: 0; overflow: auto; }
   .jo-stage.hidden { display: none; }
   html.jo-overlay-open .jo-bar { display: none !important; }
   html.jo-overlay-open .jo-stage {
@@ -561,6 +561,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     position: sticky; top: 0; z-index: 20; background: #0f172a; color: #fff;
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 14px;
   }
+  .bar { transform-origin: 0 0; will-change: transform, width; }
   .bar h1 { font-size: 14px; margin: 0 10px 0 0; font-weight: 700; }
   .bar h1 span { color: #94a3b8; font-weight: 400; }
   .bar .sp { flex: 1; }
@@ -1885,7 +1886,20 @@ var XLF = (function () {
       fb.style.width = (w * k) + 'px'; fb.style.height = (h * k) + 'px';
     });
   }
+  function applyShellZoom(scale) {
+    scale = Number(scale) || 1;
+    var bar = document.querySelector('.bar');
+    if (!bar) return;
+    bar.style.transform = scale === 1 ? '' : 'scale(' + (1 / scale) + ')';
+    bar.style.width = scale === 1 ? '' : (100 * scale) + '%';
+  }
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.jo === 'shellZoom') applyShellZoom(e.data.scale);
+  });
   window.addEventListener('resize', fit);
+  window.addEventListener('load', function () {
+    try { parent.postMessage({ jo: 'formReady' }, '*'); } catch (e) {}
+  });
 
   /* =====================================================================
      EKSPOR — mengisi BERKAS ASLI
@@ -26877,10 +26891,23 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   // Memakai CSS zoom pada elemen body: tata letak ikut menyesuaikan, jadi teks di
   // tepi layar tetap bisa digulir dan dibaca. Selama jari bergerak hanya
   // transform yang dipakai supaya ringan; zoom sungguhan diterapkan saat lepas.
+  function kirimZoomKeForm() {
+    document.querySelectorAll('.jo-stage iframe.active').forEach(function (frame) {
+      try { frame.contentWindow.postMessage({ jo: 'shellZoom', scale: halZoom }, '*'); } catch (x) {}
+    });
+  }
   function terapkanHal() {
+    /* Zoom sentuh hanya berlaku pada area form, bukan toolbar aplikasi. */
+    var stage = document.querySelector('.jo-stage');
+    if (stage) {
+      stage.style.zoom = halZoom === 1 ? '' : String(halZoom);
+      stage.style.transform = '';
+      stage.style.transformOrigin = '';
+    }
     document.body.style.transform = '';
     document.body.style.transformOrigin = '';
-    document.body.style.zoom = halZoom === 1 ? '' : halZoom;
+    document.body.style.zoom = '';
+    kirimZoomKeForm();
     siapUI();
     rst.classList.toggle('on', Math.abs(halZoom - 1) > 0.01);
   }
@@ -26958,7 +26985,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       terapkanHal();
       // Titik yang tadinya di bawah jari ditaruh di posisi akhir jari --
       // jadi zoom dan geser dalam satu gerakan sama-sama terbawa.
-      window.scrollTo(px * baru - (g.cx + (g.dx || 0)), py * baru - (g.cy + (g.dy || 0)));
+      var stage = document.querySelector('.jo-stage');
+      if (stage) {
+        stage.scrollLeft = Math.max(0, px * baru - (g.cx + (g.dx || 0)));
+        stage.scrollTop = Math.max(0, py * baru - (g.cy + (g.dy || 0)));
+      }
     }
     g = null;
   }
@@ -26968,6 +26999,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   // Safari iOS punya event gesture sendiri; dimatikan supaya tidak dobel.
   document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
   document.addEventListener('gesturechange', function (e) { e.preventDefault(); });
+
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.jo === 'formReady') kirimZoomKeForm();
+  });
 
   // ---- RIC: editornya hanya mendengar mouse, tidak ada sentuhan sama sekali.
   // Sentuhan satu jari diterjemahkan jadi mouse supaya bisa menggambar di iPad.

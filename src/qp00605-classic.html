@@ -19,6 +19,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   body { margin: 0; background: #fff; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; }
   .bar { position: sticky; top: 0; z-index: 20; background: #0f172a; color: #fff; display: flex; align-items: center;
          gap: 8px; flex-wrap: wrap; padding: 8px 14px; }
+  .bar { transform-origin: 0 0; will-change: transform, width; }
   .bar h1 { font-size: 14px; margin: 0 10px 0 0; } .bar h1 span { color: #94a3b8; font-weight: 400; }
   .bar .sp { flex: 1; }
   .bar button { border: none; border-radius: 6px; padding: 7px 13px; font: 600 12.5px 'Segoe UI', Arial, sans-serif; cursor: pointer; background: #334155; color: #fff; }
@@ -614,7 +615,20 @@ var XLF = (function () {
       pg.style.transform = 'scale(' + k + ')'; fb.style.width = (w * k) + 'px'; fb.style.height = (h * k) + 'px';
     });
   }
+  function applyShellZoom(scale) {
+    scale = Number(scale) || 1;
+    var bar = document.querySelector('.bar');
+    if (!bar) return;
+    bar.style.transform = scale === 1 ? '' : 'scale(' + (1 / scale) + ')';
+    bar.style.width = scale === 1 ? '' : (100 * scale) + '%';
+  }
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.jo === 'shellZoom') applyShellZoom(e.data.scale);
+  });
   window.addEventListener('resize', fit);
+  window.addEventListener('load', function () {
+    try { parent.postMessage({ jo: 'formReady' }, '*'); } catch (e) {}
+  });
 
   /* =====================================================================
      EKSPOR — mengisi BERKAS ASLI
