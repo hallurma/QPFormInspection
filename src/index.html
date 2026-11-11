@@ -7199,18 +7199,11 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
           }
           return (r - 1) + (rem / ((rowH[r] || H_ROW) * PT2PX));
         }
-        // exact = true -> pakai anchor tl + ext (oneCellAnchor).
-        //
-        // Kenapa dibedakan: anchor tl + br (twoCellAnchor) memaksa gambar mengisi
-        // PERSIS dari sudut kiri-atas ke kanan-bawah, dan Excel MENGABAIKAN aspect
-        // ratio saat melakukannya. Selama perhitungan piksel kita meleset sedikit
-        // dari model internal Excel (pembulatan lebar kolom / tinggi baris),
-        // gambarnya ikut melar atau gepeng.
-        //   - Foto memakai ext agar Excel mempertahankan rasio gambar secara akurat.
-        //     Ukuran gambar tidak otomatis ikut berubah saat skala cetak diubah.
-        //   - Anchor br dapat mendistorsi gambar karena koordinat sel dihitung
-        //     dari ukuran piksel perkiraan dan Excel meregangkan ke kedua sudut.
-        function placeImage(imgId, c1, c2, r1, r2, imgW, imgH, pad = 4, exact = false) {
+        // Selalu ikat kedua sudut gambar ke grid Excel. Anchor tl + ext memakai
+        // ukuran absolut dan tidak mengikuti skala cetak, sehingga foto bisa
+        // keluar dari kotaknya saat worksheet diperkecil untuk dicetak.
+        // preserveAspect menghitung ruang kosong agar foto tetap proporsional.
+        function placeImage(imgId, c1, c2, r1, r2, imgW, imgH, pad = 4, preserveAspect = false) {
           const areaW = rangeWidthPx(c1, c2);
           let areaH = 0;
           for (let r = r1; r <= r2; r++) areaH += (rowH[r] || H_ROW) * PT2PX;
@@ -7218,26 +7211,15 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
           const availW = Math.max(10, areaW - pad * 2);
           const availH = Math.max(10, areaH - pad * 2);
           let w = availW, h = availH;
-          if (exact) {
+          if (preserveAspect) {
             h = (imgH / imgW) * w;
             if (h > availH) { h = availH; w = (imgW / imgH) * h; }
           }
 
           const offX = (areaW - w) / 2, offY = (areaH - h) / 2;
           const tl = { col: pxToColFrac(c1, offX), row: pxToRowFrac(r1, offY) };
-
-          if (exact) {
-            ws.addImage(imgId, {
-              tl,
-              ext: { width: Math.round(w), height: Math.round(h) },
-              editAs: 'oneCell'
-            });
-          } else {
-            ws.addImage(imgId, {
-              tl,
-              br: { col: pxToColFrac(c1, offX + w), row: pxToRowFrac(r1, offY + h) }
-            });
-          }
+          const br = { col: pxToColFrac(c1, offX + w), row: pxToRowFrac(r1, offY + h) };
+          ws.addImage(imgId, { tl, br, editAs: 'twoCell' });
         }
 
         // ---------- BLOK HEADER (4 baris) ----------
@@ -27982,8 +27964,13 @@ var XLF = (function () {
       x = x.replace(mc0[0], '<mergeCells count="' + mall.length + '">' + mall.join('') + '</mergeCells>');
       var brk = ''; for (var k3 = 1; k3 < NP; k3++) brk += '<brk id="' + (PR * k3) + '" max="16383" man="1"/>';
       brk = '<rowBreaks count="' + (NP - 1) + '" manualBreakCount="' + (NP - 1) + '">' + brk + '</rowBreaks>';
-      x = x.replace(/(<headerFooter[^>]*\/>|<\/headerFooter>)/, '$1' + brk);
-      if (x.indexOf('<rowBreaks') < 0) x = x.replace('<drawing ', brk + '<drawing ');
+      if (x.indexOf('<rowBreaks') < 0) {
+        // SpreadsheetML mengharuskan rowBreaks sebelum colBreaks. Template
+        // Classic memiliki colBreaks, jadi sisipkan pemisah halaman tepat di
+        // depannya (menaruhnya sebelum drawing menghasilkan XML tidak valid).
+        if (x.indexOf('<colBreaks') >= 0) x = x.replace('<colBreaks', brk + '<colBreaks');
+        else x = x.replace('<drawing ', brk + '<drawing ');
+      }
       x = x.replace('<pageSetUpPr fitToPage="1"/>', '<pageSetUpPr fitToPage="0"/>');
       // skala tetap supaya pemisah halaman jatuh tepat di tiap blok 35 baris
       x = x.replace(/(<pageSetup [^>]*?)scale="\d+"/, '$1scale="' + F.scale + '"');
