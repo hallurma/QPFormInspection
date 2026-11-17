@@ -354,7 +354,8 @@
   .jo-mode-control { display: flex; align-items: center; gap: 7px; padding: 4px 8px; border: 1px solid #475569; border-radius: 8px; color: #e2e8f0; font-size: 11px; font-weight: 700; white-space: nowrap; }
   .jo-mode-control[hidden] { display: none !important; }
   .jo-mode-control input { position: absolute; opacity: 0; pointer-events: none; }
-  .jo-mode-control .track { width: 36px; height: 20px; padding: 2px; border-radius: 20px; background: #64748b; cursor: pointer; }
+  .jo-mode-control label { display: inline-flex; align-items: center; cursor: pointer; }
+  .jo-mode-control .track { display: block; flex: 0 0 36px; width: 36px; height: 20px; padding: 2px; border-radius: 20px; background: #64748b; cursor: pointer; }
   .jo-mode-control .track::after { content: ''; display: block; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s ease; }
   .jo-mode-control input:checked + .track { background: #047857; }
   .jo-mode-control input:checked + .track::after { transform: translateX(16px); }
@@ -3780,7 +3781,16 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       <button class="ann-tool" id="annTool-line"   onclick="annSetTool('line')"   title="Garis lurus">╱</button>
       <button class="ann-tool" id="annTool-free"   onclick="annSetTool('free')"   title="Coretan bebas">✎</button>
       <button class="ann-tool" id="annTool-text"   onclick="annSetTool('text')"   title="Teks — klik untuk menaruh keterangan (bisa tebal/miring/garis bawah/sorot/ukuran/poin-poin)">T</button>
-      <button class="ann-tool" id="annTool-crop"   onclick="annSetTool('crop')"   title="Crop — potong bagian foto yang tidak perlu">✂</button>
+
+
+      <span style="position:relative;display:inline-flex;align-items:center;">
+        <button class="ann-tool" id="annTool-eraser" onclick="annSetTool('eraser')" title="Penghapus: hapus objek atau sebagian coretan">&#9003;</button>
+        <span id="annEraserOptions" style="display:none;position:absolute;z-index:30;top:calc(100% + 4px);left:0;gap:8px;align-items:center;background:#fff;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.18);padding:6px 8px;color:#334155;font:12px Arial;white-space:nowrap;">
+          <label style="display:inline-flex;gap:4px;align-items:center;">Mode <select id="annEraserMode" onchange="annSetEraserMode(this.value)"><option value="object">Hapus objek</option><option value="manual">Hapus manual</option></select></label>
+          <label style="display:inline-flex;gap:4px;align-items:center;">Ukuran <input id="annEraserSize" type="range" min="8" max="64" step="2" value="36" oninput="annSetEraserSize(this.value)" style="width:84px"><span id="annEraserSizeLabel">36 px</span></label>
+        </span>
+      </span>
+      <button class="ann-tool" id="annTool-crop" onclick="annSetTool('crop')" title="Crop — potong bagian foto yang tidak perlu">✂</button>
       <button class="ann-tool" id="annTool-move"   onclick="annSetTool('move')"   title="Pindah — klik &amp; seret anotasi (termasuk teks) untuk menggeser posisinya">✥</button>
     </div>
 
@@ -3825,7 +3835,8 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
 
   <div class="ann-stage">
     <div class="ann-canvas-wrap">
-      <canvas id="annCanvas"></canvas>
+      <canvas id="annCanvas"></canvas>
+      <div id="annEraserTarget" aria-hidden="true" style="display:none;position:absolute;left:0;top:0;width:36px;height:36px;transform:translate(-50%,-50%);border:2px solid #ef4444;border-radius:50%;background:rgba(239,68,68,.13);box-sizing:border-box;box-shadow:0 0 0 1px #fff,0 0 5px #dc2626;pointer-events:none;z-index:20;"></div>
       <div class="ann-text-editor" id="annTextEditor" style="display:none;">
         <div class="ann-text-toolbar" id="annTextToolbar">
           <button id="annTB-bold" onmousedown="event.preventDefault(); annTextCmd('bold')" title="Tebal (Bold)"><b>B</b></button>
@@ -5255,7 +5266,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   //     pts: [[x,y],...] untuk coretan bebas
   //     txt: isi teks }
   const ANN_COLORS = ['#dc2626', '#eab308', '#16a34a', '#2563eb', '#ffffff', '#000000'];
-  const ANN_TOOLS = ['arrow', 'rect', 'ellipse', 'line', 'free', 'text', 'crop', 'move'];
+  const ANN_TOOLS = ['arrow', 'rect', 'ellipse', 'line', 'free', 'text', 'eraser', 'crop', 'move'];
 
   let annCur = null;   // { id, side, ann[], redo[], tool, color, width, img, W, H }
   let annDrag = null;  // gambar yang sedang ditarik
@@ -5280,7 +5291,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
         undoStack: [], redoStack: [],
         tool: 'arrow', color: ANN_COLORS[0], width: 2,
         img, W: img.width, H: img.height,
-        cropRect: null, cropDrag: null, cropApplied: false,
+        cropRect: null, cropDrag: null, cropApplied: false, eraseMode: 'object', eraserSize: 36, eraserBefore: null,
         zoom: 1, fitZoom: 1, textEditing: false, curTextBoxColor: null
       };
       annMoveDrag = null;
@@ -5310,6 +5321,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       annSetTool('arrow');
       annSetColor(ANN_COLORS[0]);
       annSetWidth(2);
+    annSyncEraserControls();
 
       // Skala "fit": muat penuh di layar tanpa perlu digulir -- jadi titik awal
       // zoom. Tombol +/- atau Ctrl+Scroll bisa memperbesar melebihi ini.
@@ -5366,7 +5378,11 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       const el = document.getElementById('annTool-' + x);
       if (el) el.classList.toggle('active', x === t);
     });
-    document.getElementById('annCanvas').style.cursor = (t === 'text') ? 'text' : (t === 'move' ? 'move' : 'crosshair');
+    document.getElementById('annCanvas').style.cursor = (t === 'text') ? 'text' : (t === 'move' ? 'move' : (t === 'eraser' ? 'none' : 'crosshair'));
+    const eraserOptions = document.getElementById('annEraserOptions');
+    if (eraserOptions) eraserOptions.style.display = t === 'eraser' ? 'flex' : 'none';
+    const eraserTarget = document.getElementById('annEraserTarget');
+    if (eraserTarget && t !== 'eraser') eraserTarget.style.display = 'none';
     annMoveDrag = null;  // pindah alat di tengah proses geser -- batalkan geseran yang belum selesai
 
     // Mode Crop: tampilkan tombol Terapkan/Batal, dan ganti subjudul jadi
@@ -5464,6 +5480,121 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       if (annHitTestShape(annCur.ann[i], px, py, annCur.W, annCur.H)) return i;
     }
     return -1;
+  }
+  function annEraserPathTouches(points, p, radius, rect) {
+    if (!points || !points.length) return false;
+    const px = p.x * rect.width, py = p.y * rect.height;
+    if (points.length === 1) return Math.hypot(points[0][0] * rect.width - px, points[0][1] * rect.height - py) <= radius;
+    for (let i = 1; i < points.length; i++) {
+      if (annDistToSegment(px, py, points[i - 1][0] * rect.width, points[i - 1][1] * rect.height,
+          points[i][0] * rect.width, points[i][1] * rect.height) <= radius) return true;
+    }
+    return false;
+  }
+
+  function annEraserShapeTouches(shape, p, radius, rect) {
+    if ((shape.t === 'richtext' || shape.t === 'text') && shape._lastBox) {
+      const b = shape._lastBox, px = p.x * rect.width, py = p.y * rect.height;
+      const left = b.x * rect.width, top = b.y * rect.height;
+      const dx = Math.max(left - px, 0, px - (left + b.w * rect.width));
+      const dy = Math.max(top - py, 0, py - (top + b.h * rect.height));
+      return dx * dx + dy * dy <= radius * radius;
+    }
+    let points = [];
+    if (shape.t === 'free') points = shape.pts || [];
+    else if (shape.t === 'arrow' || shape.t === 'line') points = [[shape.x1, shape.y1], [shape.x2, shape.y2]];
+    else if (shape.t === 'rect') points = [[shape.x1, shape.y1], [shape.x2, shape.y1], [shape.x2, shape.y2], [shape.x1, shape.y2], [shape.x1, shape.y1]];
+    else if (shape.t === 'ellipse') {
+      const cx = (shape.x1 + shape.x2) / 2, cy = (shape.y1 + shape.y2) / 2;
+      const rx = Math.abs(shape.x2 - shape.x1) / 2, ry = Math.abs(shape.y2 - shape.y1) / 2;
+      for (let i = 0; i <= 48; i++) { const a = i * Math.PI * 2 / 48; points.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); }
+    }
+    return annEraserPathTouches(points, p, radius, rect);
+  }
+
+  function annEraserCutFree(shape, p, radius, rect) {
+    const points = shape.pts || [], parts = [];
+    if (!points.length) return { hit: false, parts };
+    const px = p.x * rect.width, py = p.y * rect.height;
+    const inside = q => Math.hypot(q[0] * rect.width - px, q[1] * rect.height - py) <= radius;
+    if (points.length === 1) return { hit: inside(points[0]), parts };
+    let hit = false, part = [];
+    const push = q => {
+      if (inside(q)) {
+        hit = true;
+        if (part.length > 1) parts.push(part);
+        part = [];
+      } else {
+        const last = part[part.length - 1];
+        if (!last || Math.hypot((q[0] - last[0]) * rect.width, (q[1] - last[1]) * rect.height) > 0.5) part.push(q);
+      }
+    };
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1], b = points[i];
+      const length = Math.hypot((b[0] - a[0]) * rect.width, (b[1] - a[1]) * rect.height);
+      const steps = Math.max(1, Math.ceil(length / Math.max(2, radius * 0.35)));
+      for (let j = (i === 1 ? 0 : 1); j <= steps; j++) {
+        const t = j / steps;
+        push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      }
+    }
+    if (part.length > 1) parts.push(part);
+    return { hit, parts };
+  }
+
+  function annEraseAt(p) {
+    if (!annCur) return false;
+    const cv = document.getElementById('annCanvas'), rect = cv.getBoundingClientRect();
+    const radius = Math.max(4, +annCur.eraserSize || 36) / 2;
+    let changed = false;
+    for (let i = annCur.ann.length - 1; i >= 0; i--) {
+      const shape = annCur.ann[i];
+      if (annCur.eraseMode === 'manual' && shape.t === 'free') {
+        const cut = annEraserCutFree(shape, p, radius, rect);
+        if (!cut.hit) continue;
+        const replacements = cut.parts.map(pts => Object.assign({}, shape, { pts }));
+        annCur.ann.splice(i, 1, ...replacements);
+        changed = true;
+      } else if (annEraserShapeTouches(shape, p, radius, rect)) {
+        annCur.ann.splice(i, 1);
+        changed = true;
+      }
+    }
+    if (changed) annDraw();
+    return changed;
+  }
+
+  function annUpdateEraserTarget(e) {
+    const target = document.getElementById('annEraserTarget');
+    const cv = document.getElementById('annCanvas');
+    if (!target || !cv) return;
+    if (!annCur || annCur.tool !== 'eraser' || !e) { target.style.display = 'none'; return; }
+    const rect = cv.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) { target.style.display = 'none'; return; }
+    const size = Math.max(8, +annCur.eraserSize || 36);
+    target.style.width = size + 'px'; target.style.height = size + 'px';
+    target.style.left = x + 'px'; target.style.top = y + 'px'; target.style.display = 'block';
+  }
+
+  function annSyncEraserControls() {
+    if (!annCur) return;
+    const mode = document.getElementById('annEraserMode'), size = document.getElementById('annEraserSize');
+    const label = document.getElementById('annEraserSizeLabel');
+    if (mode) mode.value = annCur.eraseMode || 'object';
+    if (size) size.value = annCur.eraserSize || 36;
+    if (label) label.textContent = (annCur.eraserSize || 36) + ' px';
+  }
+  function annSetEraserMode(mode) {
+    if (!annCur) return;
+    annCur.eraseMode = mode === 'manual' ? 'manual' : 'object';
+  }
+  function annSetEraserSize(size) {
+    if (!annCur) return;
+    annCur.eraserSize = Math.max(8, Math.min(64, +size || 36));
+    const label = document.getElementById('annEraserSizeLabel');
+    if (label) label.textContent = annCur.eraserSize + ' px';
+    const target = document.getElementById('annEraserTarget');
+    if (target) { target.style.width = annCur.eraserSize + 'px'; target.style.height = annCur.eraserSize + 'px'; }
   }
 
   // Geser SATU anotasi sebesar (dx,dy) -- dihitung dari salinan "before" yang
@@ -5662,6 +5793,12 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
     if (annCur.textEditing) annTextCommitIfOpen();
 
     const p = annPos(e);
+    if (annCur.tool === 'eraser') {
+      annLastTextTap = null; annMoveDrag = null; annDrag = null;
+      annCur.eraserBefore = JSON.parse(JSON.stringify(annCur.ann));
+      annEraseAt(p); annUpdateEraserTarget(e);
+      return;
+    }
 
     if (annCur.tool !== 'crop') {
       const idx = annFindShapeAt(p.x, p.y);
@@ -5719,6 +5856,10 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   }
 
   function annMove(e) {
+    if (annCur) annUpdateEraserTarget(e);
+    if (annCur && annCur.tool === 'eraser' && annCur.eraserBefore) {
+      e.preventDefault(); annEraseAt(annPos(e)); return;
+    }
     if (annCur && annCur.tool === 'crop' && annCur.cropDrag) {
       e.preventDefault();
       const p = annPos(e);
@@ -5748,6 +5889,13 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   }
 
   function annEnd(e) {
+    if (annCur && annCur.tool === 'eraser' && annCur.eraserBefore) {
+      if (e) e.preventDefault();
+      const before = annCur.eraserBefore, after = JSON.parse(JSON.stringify(annCur.ann));
+      annCur.eraserBefore = null;
+      if (JSON.stringify(before) !== JSON.stringify(after)) annPushAction({ type: 'replaceAnn', before, after });
+      annDraw(); return;
+    }
     if (annCur && annCur.tool === 'crop' && annCur.cropDrag) {
       if (e) e.preventDefault();
       const r = annCur.cropDrag;
@@ -5824,6 +5972,8 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       annCur.ann.pop();
     } else if (act.type === 'clearAll') {
       annCur.ann = act.prevAnn.map(a => Object.assign({}, a));
+    } else if (act.type === 'replaceAnn') {
+      annCur.ann = JSON.parse(JSON.stringify(act.before));
     } else if (act.type === 'crop') {
       annRestoreCropState(act.before);
     } else if (act.type === 'editShape') {
@@ -5837,6 +5987,8 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       annCur.ann.push(Object.assign({}, act.shape));
     } else if (act.type === 'clearAll') {
       annCur.ann = [];
+    } else if (act.type === 'replaceAnn') {
+      annCur.ann = JSON.parse(JSON.stringify(act.after));
     } else if (act.type === 'crop') {
       annRestoreCropState(act.after);
     } else if (act.type === 'editShape') {
@@ -13115,7 +13267,16 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       <button class="ann-tool" id="annTool-line"   onclick="annSetTool('line')"   title="Garis lurus">╱</button>
       <button class="ann-tool" id="annTool-free"   onclick="annSetTool('free')"   title="Coretan bebas">✎</button>
       <button class="ann-tool" id="annTool-text"   onclick="annSetTool('text')"   title="Teks (bisa tebal/miring/garis bawah/sorot/ukuran/poin-poin)">T</button>
-      <button class="ann-tool" id="annTool-crop"   onclick="annSetTool('crop')"   title="Crop — potong bagian foto">✂</button>
+
+
+      <span style="position:relative;display:inline-flex;align-items:center;">
+        <button class="ann-tool" id="annTool-eraser" onclick="annSetTool('eraser')" title="Penghapus: hapus objek atau sebagian coretan">&#9003;</button>
+        <span id="annEraserOptions" style="display:none;position:absolute;z-index:30;top:calc(100% + 4px);left:0;gap:8px;align-items:center;background:#fff;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.18);padding:6px 8px;color:#334155;font:12px Arial;white-space:nowrap;">
+          <label style="display:inline-flex;gap:4px;align-items:center;">Mode <select id="annEraserMode" onchange="annSetEraserMode(this.value)"><option value="object">Hapus objek</option><option value="manual">Hapus manual</option></select></label>
+          <label style="display:inline-flex;gap:4px;align-items:center;">Ukuran <input id="annEraserSize" type="range" min="8" max="64" step="2" value="36" oninput="annSetEraserSize(this.value)" style="width:84px"><span id="annEraserSizeLabel">36 px</span></label>
+        </span>
+      </span>
+      <button class="ann-tool" id="annTool-crop" onclick="annSetTool('crop')" title="Crop — potong bagian foto">✂</button>
       <button class="ann-tool" id="annTool-move"   onclick="annSetTool('move')"   title="Pindah — klik &amp; seret anotasi untuk menggeser posisinya">✥</button>
     </div>
     <div class="ann-grp">
@@ -13154,7 +13315,8 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   </div>
   <div class="ann-stage">
     <div class="ann-canvas-wrap">
-      <canvas id="annCanvas"></canvas>
+      <canvas id="annCanvas"></canvas>
+      <div id="annEraserTarget" aria-hidden="true" style="display:none;position:absolute;left:0;top:0;width:36px;height:36px;transform:translate(-50%,-50%);border:2px solid #ef4444;border-radius:50%;background:rgba(239,68,68,.13);box-sizing:border-box;box-shadow:0 0 0 1px #fff,0 0 5px #dc2626;pointer-events:none;z-index:20;"></div>
       <div class="ann-text-editor" id="annTextEditor" style="display:none;">
         <div class="ann-text-toolbar" id="annTextToolbar">
           <button id="annTB-bold" onmousedown="event.preventDefault(); annTextCmd('bold')" title="Tebal (Bold)"><b>B</b></button>
@@ -14425,7 +14587,7 @@ function annRotateCurrent(delta) {
   //     pts: [[x,y],...] untuk coretan bebas
   //     txt: isi teks }
   const ANN_COLORS = ['#dc2626', '#eab308', '#16a34a', '#2563eb', '#ffffff', '#000000'];
-  const ANN_TOOLS = ['arrow', 'rect', 'ellipse', 'line', 'free', 'text', 'crop', 'move'];
+  const ANN_TOOLS = ['arrow', 'rect', 'ellipse', 'line', 'free', 'text', 'eraser', 'crop', 'move'];
 
   let annCur = null;   // { id, side, ann[], redo[], tool, color, width, img, W, H }
   let annDrag = null;  // gambar yang sedang ditarik
@@ -14450,7 +14612,7 @@ function annRotateCurrent(delta) {
         undoStack: [], redoStack: [],
         tool: 'arrow', color: ANN_COLORS[0], width: 2,
         img, W: img.width, H: img.height,
-        cropRect: null, cropDrag: null, cropApplied: false,
+        cropRect: null, cropDrag: null, cropApplied: false, eraseMode: 'object', eraserSize: 36, eraserBefore: null,
         zoom: 1, fitZoom: 1, textEditing: false, curTextBoxColor: null
       };
       annMoveDrag = null;
@@ -14478,6 +14640,7 @@ function annRotateCurrent(delta) {
       annSetTool('arrow');
       annSetColor(ANN_COLORS[0]);
       annSetWidth(2);
+    annSyncEraserControls();
 
       // Skala "fit": muat penuh di layar tanpa perlu digulir -- jadi titik awal
       // zoom. Tombol +/- atau Ctrl+Scroll bisa memperbesar melebihi ini.
@@ -14534,7 +14697,11 @@ function annRotateCurrent(delta) {
       const el = document.getElementById('annTool-' + x);
       if (el) el.classList.toggle('active', x === t);
     });
-    document.getElementById('annCanvas').style.cursor = (t === 'text') ? 'text' : (t === 'move' ? 'move' : 'crosshair');
+    document.getElementById('annCanvas').style.cursor = (t === 'text') ? 'text' : (t === 'move' ? 'move' : (t === 'eraser' ? 'none' : 'crosshair'));
+    const eraserOptions = document.getElementById('annEraserOptions');
+    if (eraserOptions) eraserOptions.style.display = t === 'eraser' ? 'flex' : 'none';
+    const eraserTarget = document.getElementById('annEraserTarget');
+    if (eraserTarget && t !== 'eraser') eraserTarget.style.display = 'none';
     annMoveDrag = null;  // pindah alat di tengah proses geser -- batalkan geseran yang belum selesai
 
     // Mode Crop: tampilkan tombol Terapkan/Batal, dan ganti subjudul jadi
@@ -14632,6 +14799,121 @@ function annRotateCurrent(delta) {
       if (annHitTestShape(annCur.ann[i], px, py, annCur.W, annCur.H)) return i;
     }
     return -1;
+  }
+  function annEraserPathTouches(points, p, radius, rect) {
+    if (!points || !points.length) return false;
+    const px = p.x * rect.width, py = p.y * rect.height;
+    if (points.length === 1) return Math.hypot(points[0][0] * rect.width - px, points[0][1] * rect.height - py) <= radius;
+    for (let i = 1; i < points.length; i++) {
+      if (annDistToSegment(px, py, points[i - 1][0] * rect.width, points[i - 1][1] * rect.height,
+          points[i][0] * rect.width, points[i][1] * rect.height) <= radius) return true;
+    }
+    return false;
+  }
+
+  function annEraserShapeTouches(shape, p, radius, rect) {
+    if ((shape.t === 'richtext' || shape.t === 'text') && shape._lastBox) {
+      const b = shape._lastBox, px = p.x * rect.width, py = p.y * rect.height;
+      const left = b.x * rect.width, top = b.y * rect.height;
+      const dx = Math.max(left - px, 0, px - (left + b.w * rect.width));
+      const dy = Math.max(top - py, 0, py - (top + b.h * rect.height));
+      return dx * dx + dy * dy <= radius * radius;
+    }
+    let points = [];
+    if (shape.t === 'free') points = shape.pts || [];
+    else if (shape.t === 'arrow' || shape.t === 'line') points = [[shape.x1, shape.y1], [shape.x2, shape.y2]];
+    else if (shape.t === 'rect') points = [[shape.x1, shape.y1], [shape.x2, shape.y1], [shape.x2, shape.y2], [shape.x1, shape.y2], [shape.x1, shape.y1]];
+    else if (shape.t === 'ellipse') {
+      const cx = (shape.x1 + shape.x2) / 2, cy = (shape.y1 + shape.y2) / 2;
+      const rx = Math.abs(shape.x2 - shape.x1) / 2, ry = Math.abs(shape.y2 - shape.y1) / 2;
+      for (let i = 0; i <= 48; i++) { const a = i * Math.PI * 2 / 48; points.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); }
+    }
+    return annEraserPathTouches(points, p, radius, rect);
+  }
+
+  function annEraserCutFree(shape, p, radius, rect) {
+    const points = shape.pts || [], parts = [];
+    if (!points.length) return { hit: false, parts };
+    const px = p.x * rect.width, py = p.y * rect.height;
+    const inside = q => Math.hypot(q[0] * rect.width - px, q[1] * rect.height - py) <= radius;
+    if (points.length === 1) return { hit: inside(points[0]), parts };
+    let hit = false, part = [];
+    const push = q => {
+      if (inside(q)) {
+        hit = true;
+        if (part.length > 1) parts.push(part);
+        part = [];
+      } else {
+        const last = part[part.length - 1];
+        if (!last || Math.hypot((q[0] - last[0]) * rect.width, (q[1] - last[1]) * rect.height) > 0.5) part.push(q);
+      }
+    };
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1], b = points[i];
+      const length = Math.hypot((b[0] - a[0]) * rect.width, (b[1] - a[1]) * rect.height);
+      const steps = Math.max(1, Math.ceil(length / Math.max(2, radius * 0.35)));
+      for (let j = (i === 1 ? 0 : 1); j <= steps; j++) {
+        const t = j / steps;
+        push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      }
+    }
+    if (part.length > 1) parts.push(part);
+    return { hit, parts };
+  }
+
+  function annEraseAt(p) {
+    if (!annCur) return false;
+    const cv = document.getElementById('annCanvas'), rect = cv.getBoundingClientRect();
+    const radius = Math.max(4, +annCur.eraserSize || 36) / 2;
+    let changed = false;
+    for (let i = annCur.ann.length - 1; i >= 0; i--) {
+      const shape = annCur.ann[i];
+      if (annCur.eraseMode === 'manual' && shape.t === 'free') {
+        const cut = annEraserCutFree(shape, p, radius, rect);
+        if (!cut.hit) continue;
+        const replacements = cut.parts.map(pts => Object.assign({}, shape, { pts }));
+        annCur.ann.splice(i, 1, ...replacements);
+        changed = true;
+      } else if (annEraserShapeTouches(shape, p, radius, rect)) {
+        annCur.ann.splice(i, 1);
+        changed = true;
+      }
+    }
+    if (changed) annDraw();
+    return changed;
+  }
+
+  function annUpdateEraserTarget(e) {
+    const target = document.getElementById('annEraserTarget');
+    const cv = document.getElementById('annCanvas');
+    if (!target || !cv) return;
+    if (!annCur || annCur.tool !== 'eraser' || !e) { target.style.display = 'none'; return; }
+    const rect = cv.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) { target.style.display = 'none'; return; }
+    const size = Math.max(8, +annCur.eraserSize || 36);
+    target.style.width = size + 'px'; target.style.height = size + 'px';
+    target.style.left = x + 'px'; target.style.top = y + 'px'; target.style.display = 'block';
+  }
+
+  function annSyncEraserControls() {
+    if (!annCur) return;
+    const mode = document.getElementById('annEraserMode'), size = document.getElementById('annEraserSize');
+    const label = document.getElementById('annEraserSizeLabel');
+    if (mode) mode.value = annCur.eraseMode || 'object';
+    if (size) size.value = annCur.eraserSize || 36;
+    if (label) label.textContent = (annCur.eraserSize || 36) + ' px';
+  }
+  function annSetEraserMode(mode) {
+    if (!annCur) return;
+    annCur.eraseMode = mode === 'manual' ? 'manual' : 'object';
+  }
+  function annSetEraserSize(size) {
+    if (!annCur) return;
+    annCur.eraserSize = Math.max(8, Math.min(64, +size || 36));
+    const label = document.getElementById('annEraserSizeLabel');
+    if (label) label.textContent = annCur.eraserSize + ' px';
+    const target = document.getElementById('annEraserTarget');
+    if (target) { target.style.width = annCur.eraserSize + 'px'; target.style.height = annCur.eraserSize + 'px'; }
   }
 
   // Geser SATU anotasi sebesar (dx,dy) -- dihitung dari salinan "before" yang
@@ -14830,6 +15112,12 @@ function annRotateCurrent(delta) {
     if (annCur.textEditing) annTextCommitIfOpen();
 
     const p = annPos(e);
+    if (annCur.tool === 'eraser') {
+      annLastTextTap = null; annMoveDrag = null; annDrag = null;
+      annCur.eraserBefore = JSON.parse(JSON.stringify(annCur.ann));
+      annEraseAt(p); annUpdateEraserTarget(e);
+      return;
+    }
 
     if (annCur.tool !== 'crop') {
       const idx = annFindShapeAt(p.x, p.y);
@@ -14887,6 +15175,10 @@ function annRotateCurrent(delta) {
   }
 
   function annMove(e) {
+    if (annCur) annUpdateEraserTarget(e);
+    if (annCur && annCur.tool === 'eraser' && annCur.eraserBefore) {
+      e.preventDefault(); annEraseAt(annPos(e)); return;
+    }
     if (annCur && annCur.tool === 'crop' && annCur.cropDrag) {
       e.preventDefault();
       const p = annPos(e);
@@ -14916,6 +15208,13 @@ function annRotateCurrent(delta) {
   }
 
   function annEnd(e) {
+    if (annCur && annCur.tool === 'eraser' && annCur.eraserBefore) {
+      if (e) e.preventDefault();
+      const before = annCur.eraserBefore, after = JSON.parse(JSON.stringify(annCur.ann));
+      annCur.eraserBefore = null;
+      if (JSON.stringify(before) !== JSON.stringify(after)) annPushAction({ type: 'replaceAnn', before, after });
+      annDraw(); return;
+    }
     if (annCur && annCur.tool === 'crop' && annCur.cropDrag) {
       if (e) e.preventDefault();
       const r = annCur.cropDrag;
@@ -14992,6 +15291,8 @@ function annRotateCurrent(delta) {
       annCur.ann.pop();
     } else if (act.type === 'clearAll') {
       annCur.ann = act.prevAnn.map(a => Object.assign({}, a));
+    } else if (act.type === 'replaceAnn') {
+      annCur.ann = JSON.parse(JSON.stringify(act.before));
     } else if (act.type === 'crop') {
       annRestoreCropState(act.before);
     } else if (act.type === 'editShape') {
@@ -15005,6 +15306,8 @@ function annRotateCurrent(delta) {
       annCur.ann.push(Object.assign({}, act.shape));
     } else if (act.type === 'clearAll') {
       annCur.ann = [];
+    } else if (act.type === 'replaceAnn') {
+      annCur.ann = JSON.parse(JSON.stringify(act.after));
     } else if (act.type === 'crop') {
       annRestoreCropState(act.after);
     } else if (act.type === 'editShape') {
@@ -27493,7 +27796,7 @@ var XLF = (function () {
   var TOOLS = [['pen', '✎', 'Coretan bebas'], ['line', '╱', 'Garis'], ['arrow', '➝', 'Panah'],
                ['rect', '▭', 'Kotak'], ['ellipse', '◯', 'Lingkaran / elips'], ['text', 'T', 'Teks']];
   var SW = ['#d40000', '#ff7a00', '#ffd400', '#0a8a2a', '#0f2a80', '#000000', '#ffffff'];
-  function optOf(d, z) { d.opt = d.opt || { t: z.sig ? 'pen' : 'rect', col: z.sig ? '#0f2a80' : '#d40000', lw: z.sig ? 1.9 : 3, dash: false }; return d.opt; }
+  function optOf(d, z) { d.opt = d.opt || { t: z.sig ? 'pen' : 'rect', col: z.sig ? '#0f2a80' : '#d40000', lw: z.sig ? 1.9 : 3, dash: false, eraseMode: 'object', eraserSize: 36 }; if (!d.opt.eraseMode) d.opt.eraseMode = 'object'; if (!d.opt.eraserSize) d.opt.eraserSize = 36; return d.opt; }
   function toolsHTML(z, big) {
     if (z.sig) return big ? '' : '<button type="button" data-a="undo" title="Batalkan">↶</button><button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr" title="Hapus">✕</button>';
     return '<span class="tgrp">' + TOOLS.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '" title="' + t[2] + '">' + t[1] + '</button>'; }).join('') + '</span>' +
@@ -27515,13 +27818,19 @@ var XLF = (function () {
       '<span class="tgrp"><button type="button" data-a="rotL" title="Putar foto ke kiri">↺</button><button type="button" data-a="rotR" title="Putar foto ke kanan">↻</button><button type="button" data-a="crop" title="Potong foto">Crop</button><button type="button" data-a="img">Foto</button><button type="button" data-a="undo">Undo</button>' +
       (big ? '' : '<button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button>') + '</span>';
   }
+  function eraserHTML() {
+    return '<span class="eraser-menu" style="position:relative;display:inline-flex;align-items:center;">' +
+      '<button type="button" class="tl" data-t="eraser" title="Penghapus">&#129529;</button>' +
+      '<span class="eraser-options" style="display:none;position:absolute;z-index:50;top:calc(100% + 4px);left:0;gap:8px;align-items:center;background:#fff;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.18);padding:6px 8px;color:#334155;font:12px Arial;white-space:nowrap;">' +
+      '<label style="display:inline-flex;gap:4px;align-items:center;">Mode <select data-a="eraseMode"><option value="object">Hapus objek</option><option value="manual">Hapus manual</option></select></label>' +
+      '<label style="display:inline-flex;gap:4px;align-items:center;">Ukuran <input type="range" min="8" max="64" step="2" value="36" data-a="eraserSize" style="width:84px"><span class="eraser-size-label">36 px</span></label></span></span>';
+  }
   function toolsHTML(z, big) {
-    if (z.sig) return '<span class="tgrp">' + TOOLS.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '<button type="button" class="tl" data-t="eraser">Penghapus</button></span>' +
+    if (z.sig) return '<span class="tgrp">' + TOOLS.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '">' + t[1] + '</button>'; }).join('') + eraserHTML() + '</span>' +
       '<span class="tgrp"><label class="spec"><input type="color" data-a="col"></label><label class="lwl">≡<input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label></span>' +
       (big ? '' : '<button type="button" data-a="undo">Undo</button><button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button>');
     if (!big) return '<span class="tgrp"><button type="button" data-a="img">Foto</button><button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button></span>';
-    var editTools = TOOLS.concat([['eraser','⌫','Penghapus']]);
-    return '<span class="tgrp">' + editTools.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '" title="' + (t[2] || 'Penghapus') + '">' + t[1] + '</button>'; }).join('') + '</span>' +
+    return '<span class="tgrp">' + TOOLS.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '" title="' + t[2] + '">' + t[1] + '</button>'; }).join('') + eraserHTML() + '</span>' +
       '<span class="tgrp">' + SW.map(function (c) { return '<button type="button" class="sw" data-c="' + c + '" style="background:' + c + '"></button>'; }).join('') + '<label class="spec"><input type="color" data-a="col"></label></span>' +
       '<span class="tgrp"><label class="lwl">≡<input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label><button type="button" class="dsh" data-a="dash">Putus-putus</button></span>' +
       '<span class="tgrp"><button type="button" data-a="rotL">↺</button><button type="button" data-a="rotR">↻</button><button type="button" data-a="crop">Crop</button><button type="button" data-a="img">Foto</button><button type="button" data-a="undo">Undo</button><button type="button" data-a="clr">Hapus</button></span>';
@@ -27535,23 +27844,37 @@ var XLF = (function () {
     var lw = root.querySelector('[data-a="lw"]'); if (lw) lw.value = o.lw;
     var lv = root.querySelector('.lwv'); if (lv) lv.textContent = o.lw;
     var ds = root.querySelector('.dsh'); if (ds) ds.classList.toggle('on', !!o.dash);
+    var em = root.querySelector('[data-a="eraseMode"]'); if (em) em.value = o.eraseMode || 'object';
+    var es = root.querySelector('[data-a="eraserSize"]'); if (es) es.value = o.eraserSize || 36;
+    var el = root.querySelector('.eraser-size-label'); if (el) el.textContent = (o.eraserSize || 36) + ' px';
   }
   function wireTools(root, getD, z, act) {
-    root.addEventListener('click', function (e) {
-      var b = e.target.closest('button'); if (!b || !root.contains(b)) return;
-      var d = getD(), o = optOf(d, z);
-      if (b.classList.contains('tl')) o.t = b.getAttribute('data-t');
-      else if (b.classList.contains('sw')) o.col = b.getAttribute('data-c');
-      else if (b.getAttribute('data-a') === 'dash') o.dash = !o.dash;
-      else { act(b.getAttribute('data-a')); return; }
-      paintTools(root, d, z); save();
-    });
-    root.addEventListener('input', function (e) {
+    function updateValue(e) {
       var a = e.target.getAttribute('data-a'), d = getD(), o = optOf(d, z);
       if (a === 'col') o.col = e.target.value;
       if (a === 'lw') o.lw = +e.target.value;
+      if (a === 'eraseMode') o.eraseMode = e.target.value === 'manual' ? 'manual' : 'object';
+      if (a === 'eraserSize') o.eraserSize = Math.max(8, Math.min(64, +e.target.value || 36));
+      paintTools(root, d, z); save();
+    }
+    root.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b || !root.contains(b)) return;
+      var d = getD(), o = optOf(d, z);
+      if (b.classList.contains('tl')) {
+        o.t = b.getAttribute('data-t');
+        var menu = root.querySelector('.eraser-options');
+        if (menu) menu.style.display = o.t === 'eraser' ? (menu.style.display === 'flex' ? 'none' : 'flex') : 'none';
+      } else if (b.classList.contains('sw')) o.col = b.getAttribute('data-c');
+      else if (b.getAttribute('data-a') === 'dash') o.dash = !o.dash;
+      else if (b.getAttribute('data-a') === 'undo') {
+        d.undoStack = d.undoStack || [];
+        if (d.undoStack.length) d.strokes = d.undoStack.pop(); else d.strokes.pop();
+        paintTools(root, d, z); save(); if (act) act('redraw'); return;
+      } else { act(b.getAttribute('data-a')); return; }
       paintTools(root, d, z); save();
     });
+    root.addEventListener('input', updateValue);
+    root.addEventListener('change', updateValue);
   }
   function dget(k, i) { var z = F.zones[i]; var kk = z.shared ? 0 : k; D(kk)[i] = D(kk)[i] || blank(); return D(kk)[i]; }
   function buildDraw(k, i, z, ovl, mirror) {
@@ -27665,38 +27988,47 @@ var XLF = (function () {
     render(cv, d, z); box.classList.toggle('has', !!(d.strokes.length || d.img)); box.classList.toggle('has-photo', !!d.img);
   }
   function attachPad(cv, getD, z, onEnd, onMove) {
-    var cur = null;
+    var cur = null, eraseBefore = null;
+    var host = cv.parentNode, target = document.createElement('div');
+    target.style.cssText = 'display:none;position:absolute;width:36px;height:36px;transform:translate(-50%,-50%);border:2px solid #ef4444;border-radius:50%;background:rgba(239,68,68,.13);box-sizing:border-box;box-shadow:0 0 0 1px #fff,0 0 5px #dc2626;pointer-events:none;z-index:50';
+    host.appendChild(target);
     function pt(e) { var r = cv.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; }
+    function clone(v) { return JSON.parse(JSON.stringify(v || [])); }
+    function pathOf(st) {
+      if (st.t === 'pen') return st.p || [];
+      if (st.t === 'rect' && st.a && st.b) return [[st.a[0],st.a[1]],[st.b[0],st.a[1]],[st.b[0],st.b[1]],[st.a[0],st.b[1]],[st.a[0],st.a[1]]];
+      if (st.t === 'ellipse' && st.a && st.b) { var out=[],cx=(st.a[0]+st.b[0])/2,cy=(st.a[1]+st.b[1])/2,rx=Math.abs(st.b[0]-st.a[0])/2,ry=Math.abs(st.b[1]-st.a[1])/2; for(var n=0;n<=32;n++){var a=n*Math.PI/16;out.push([cx+Math.cos(a)*rx,cy+Math.sin(a)*ry]);} return out; }
+      return [st.a, st.b].filter(Boolean);
+    }
+    function distToSegment(p,a,b,r) { var px=p[0]*r.width,py=p[1]*r.height,ax=a[0]*r.width,ay=a[1]*r.height,bx=b[0]*r.width,by=b[1]*r.height,dx=bx-ax,dy=by-ay,t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/(dx*dx+dy*dy||1))); return Math.hypot(px-(ax+t*dx),py-(ay+t*dy)); }
+    function touches(points,p,radius,r) { if(!points.length)return false; if(points.length===1)return Math.hypot((points[0][0]-p[0])*r.width,(points[0][1]-p[1])*r.height)<=radius; for(var i=1;i<points.length;i++)if(distToSegment(p,points[i-1],points[i],r)<=radius)return true; return false; }
+    function cutPen(st,p,radius,r) {
+      var points=st.p||[],parts=[],part=[],hit=false;if(!points.length)return{hit:false,parts};
+      function inside(q){return Math.hypot((q[0]-p[0])*r.width,(q[1]-p[1])*r.height)<=radius;}
+      if(points.length===1)return{hit:inside(points[0]),parts};
+      function push(q){if(inside(q)){hit=true;if(part.length>1)parts.push(part);part=[];}else{var last=part[part.length-1];if(!last||Math.hypot((q[0]-last[0])*r.width,(q[1]-last[1])*r.height)>.5)part.push(q);}}
+      for(var i=1;i<points.length;i++){var a=points[i-1],b=points[i],len=Math.hypot((b[0]-a[0])*r.width,(b[1]-a[1])*r.height),steps=Math.max(1,Math.ceil(len/Math.max(2,radius*.35)));for(var j=(i===1?0:1);j<=steps;j++){var t=j/steps;push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);}}
+      if(part.length>1)parts.push(part);return{hit:hit,parts:parts};
+    }
     function eraseAt(p) {
-      var d = getD(), r = cv.getBoundingClientRect(), radius = Math.max(12, (optOf(d, z).lw || 2) * 5);
-      d.strokes = d.strokes.filter(function (st) {
-        var pts = st.t === 'pen' ? (st.p || []) : [st.a, st.b].filter(Boolean);
-        return !pts.some(function (q) { return Math.hypot((q[0] - p[0]) * r.width, (q[1] - p[1]) * r.height) <= radius; });
-      });
-      if (onMove) onMove();
+      var d=getD(),r=cv.getBoundingClientRect(),o=optOf(d,z),radius=Math.max(8,+o.eraserSize||36)/2,kept=[];
+      d.strokes.forEach(function(st){if(o.eraseMode==='manual'&&st.t==='pen'){var cut=cutPen(st,p,radius,r);if(!cut.hit){kept.push(st);return;}cut.parts.forEach(function(seg){kept.push(Object.assign({},st,{p:seg}));});return;}if(!touches(pathOf(st),p,radius,r))kept.push(st);});
+      d.strokes=kept;if(onMove)onMove();
     }
-    cv.addEventListener('pointerdown', function (e) {
-      if (e.pointerType === 'touch' && !e.isPrimary) return;
-      var bx = cv.parentNode;
-      if (bx.classList.contains('xd') && !bx.classList.contains('act') && e.pointerType !== 'mouse') return;
-      e.preventDefault();
-      var d = getD(), o = optOf(d, z), p = pt(e);
-      if (o.t === 'text') {
-        var t = prompt('Teks anotasi:'); if (!t || !t.trim()) return;
-        d.strokes.push({ t: 'text', a: p, s: t.trim(), col: o.col, lw: o.lw }); if (onEnd) onEnd(); return;
-      }
+    function updateTarget(e,o) { if(!o||o.t!=='eraser'){target.style.display='none';cv.style.cursor='crosshair';return;}var r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*cv.clientWidth,y=(e.clientY-r.top)/r.height*cv.clientHeight,size=Math.max(8,+o.eraserSize||36);if(x<0||y<0||x>cv.clientWidth||y>cv.clientHeight){target.style.display='none';return;}target.style.width=size+'px';target.style.height=size+'px';target.style.left=(cv.offsetLeft+x)+'px';target.style.top=(cv.offsetTop+y)+'px';target.style.display='block';cv.style.cursor='none'; }
+    cv.addEventListener('pointerdown', function(e) {
+      if(e.pointerType==='touch'&&!e.isPrimary)return;
+      var bx=cv.parentNode;if(bx.classList.contains('xd')&&!bx.classList.contains('act')&&e.pointerType!=='mouse')return;
+      e.preventDefault();var d=getD(),o=optOf(d,z),p=pt(e);
+      if(o.t==='text'&&!z.sig){var t=prompt('Teks anotasi:');if(!t||!t.trim())return;d.undoStack=[];d.strokes.push({t:'text',a:p,s:t.trim(),col:o.col,lw:o.lw});if(onEnd)onEnd();return;}
       cv.setPointerCapture(e.pointerId);
-      if (o.t === 'eraser') { cur = { t: 'eraser' }; eraseAt(p); return; }
-      cur = o.t === 'pen' ? { t: 'pen', p: [p], col: o.col, lw: o.lw, dash: !z.sig && o.dash } : { t: o.t, a: p, b: p, col: o.col, lw: o.lw, dash: o.dash };
-      d.strokes.push(cur); if (onMove) onMove();
+      if(o.t==='eraser'){eraseBefore=clone(d.strokes);cur={t:'eraser'};updateTarget(e,o);eraseAt(p);return;}
+      d.undoStack=[];cur=o.t==='pen'||z.sig?{t:'pen',p:[p],col:o.col,lw:o.lw,dash:!z.sig&&o.dash}:{t:o.t,a:p,b:p,col:o.col,lw:o.lw,dash:o.dash};d.strokes.push(cur);if(onMove)onMove();
     });
-    cv.addEventListener('pointermove', function (e) { if (!cur) return; e.preventDefault(); if (cur.t === 'eraser') eraseAt(pt(e)); else if (cur.t === 'pen') cur.p.push(pt(e)); else cur.b = pt(e); if (onMove) onMove(); });
-    function end() {
-      if (!cur) return;
-      if (cur.t !== 'pen' && cur.t !== 'eraser' && Math.abs(cur.a[0] - cur.b[0]) + Math.abs(cur.a[1] - cur.b[1]) < .004) getD().strokes.pop();
-      cur = null; if (onEnd) onEnd();
-    }
-    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    cv.addEventListener('pointermove', function(e){var o=optOf(getD(),z);updateTarget(e,o);if(!cur)return;e.preventDefault();if(cur.t==='eraser')eraseAt(pt(e));else if(cur.t==='pen')cur.p.push(pt(e));else cur.b=pt(e);if(cur.t!=='eraser'&&onMove)onMove();});
+    cv.addEventListener('pointerleave',function(){if(!cur)target.style.display='none';});
+    function end(){if(!cur)return;var d=getD();if(cur.t==='eraser'){var after=clone(d.strokes);if(eraseBefore&&JSON.stringify(eraseBefore)!==JSON.stringify(after)){d.undoStack=d.undoStack||[];d.undoStack.push(eraseBefore);if(d.undoStack.length>40)d.undoStack.shift();}eraseBefore=null;}else if(cur.t!=='pen'&&Math.abs(cur.a[0]-cur.b[0])+Math.abs(cur.a[1]-cur.b[1])<.004)d.strokes.pop();cur=null;if(onEnd)onEnd();}
+    cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
   }
   function mapStrokePoint(p, map) { if (p) { var q = map(p[0], p[1]); p[0] = q[0]; p[1] = q[1]; } }
   function rotateImage(d, deg, done) {
@@ -28422,25 +28754,27 @@ var XLF = (function () {
   var TOOLS = [['pen', '✎', 'Coretan bebas'], ['line', '╱', 'Garis'], ['arrow', '➝', 'Panah'],
                ['rect', '▭', 'Kotak'], ['ellipse', '◯', 'Lingkaran / elips'], ['text', 'T', 'Teks']];
   var SWATCH = ['#d40000', '#ff7a00', '#ffd400', '#0a8a2a', '#0f2a80', '#000000', '#ffffff'];
-  function optOf(d, z) { d.opt = d.opt || { t: 'pen', col: z.sig ? '#0f2a80' : '#d40000', lw: z.sig ? 1.9 : 3, dash: false }; return d.opt; }
+  function optOf(d, z) { d.opt = d.opt || { t: 'pen', col: z.sig ? '#0f2a80' : '#d40000', lw: z.sig ? 1.9 : 3, dash: false, eraseMode: 'object', eraserSize: 36 }; if (!d.opt.eraseMode) d.opt.eraseMode = 'object'; if (!d.opt.eraserSize) d.opt.eraserSize = 36; return d.opt; }
+  function eraserHTML() {
+    return '<span class="eraser-menu" style="position:relative;display:inline-flex;align-items:center;">' +
+      '<button type="button" class="tl" data-t="eraser" title="Penghapus">&#129529;</button>' +
+      '<span class="eraser-options" style="display:none;position:absolute;z-index:50;top:calc(100% + 4px);left:0;gap:8px;align-items:center;background:#fff;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.18);padding:6px 8px;color:#334155;font:12px Arial;white-space:nowrap;">' +
+      '<label style="display:inline-flex;gap:4px;align-items:center;">Mode <select data-a="eraseMode"><option value="object">Hapus objek</option><option value="manual">Hapus manual</option></select></label>' +
+      '<label style="display:inline-flex;gap:4px;align-items:center;">Ukuran <input type="range" min="8" max="64" step="2" value="36" data-a="eraserSize" style="width:84px"><span class="eraser-size-label">36 px</span></label></span></span>';
+  }
   function toolsHTML(z, big) {
-    if (z.sig) return big ? '' : '<button type="button" data-a="undo" title="Batalkan">↶</button>' +
-      '<button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr" title="Hapus">✕</button>';
-    if (!big) return '<span class="tgrp">' + (z.img ? '<button type="button" data-a="img" title="Sisipkan / ganti foto">🖼 Foto</button>' : '') +
-      '<button type="button" data-a="big" title="Editor besar">Perbesar</button><button type="button" data-a="clr" title="Hapus semua">✕</button></span>';
-    return '<span class="tgrp">' + TOOLS.map(function (t) {
-        return '<button type="button" class="tl" data-t="' + t[0] + '" title="' + t[2] + '">' + t[1] + '</button>'; }).join('') + '</span>' +
-      '<span class="tgrp">' + SWATCH.map(function (c) {
-        return '<button type="button" class="sw" data-c="' + c + '" style="background:' + c + '"></button>'; }).join('') +
+    if (z.sig) return '<span class="tgrp">' + eraserHTML() + '</span>' + (big ? '' : '<button type="button" data-a="undo">Undo</button><button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button>');
+    if (!big) return '<span class="tgrp">' + (z.img ? '<button type="button" data-a="img" title="Sisipkan / ganti foto">Foto</button>' : '') +
+      '<button type="button" data-a="big" title="Editor besar">Perbesar</button><button type="button" data-a="clr" title="Hapus semua">Hapus</button></span>';
+    return '<span class="tgrp">' + TOOLS.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '" title="' + t[2] + '">' + t[1] + '</button>'; }).join('') + eraserHTML() + '</span>' +
+      '<span class="tgrp">' + SWATCH.map(function (c) { return '<button type="button" class="sw" data-c="' + c + '" style="background:' + c + '"></button>'; }).join('') +
       '<label class="spec" title="Warna bebas (spektrum)"><input type="color" data-a="col"></label></span>' +
-      '<span class="tgrp"><label class="lwl" title="Tebal garis">≡<input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label>' +
-      '<button type="button" class="dsh" data-a="dash" title="Garis putus-putus">┄</button></span>' +
-      '<span class="tgrp">' + (z.img ? '<button type="button" data-a="img" title="Sisipkan / ganti foto">🖼 Foto</button>' : '') +
-      '<button type="button" data-a="undo" title="Batalkan goresan terakhir">↶</button>' +
-      (big ? '' : '<button type="button" data-a="big" title="Editor besar">Perbesar</button><button type="button" data-a="clr" title="Hapus semua">✕</button>') + '</span>';
+      '<span class="tgrp"><label class="lwl" title="Tebal garis">≡<input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label><button type="button" class="dsh" data-a="dash">Putus-putus</button></span>' +
+      '<span class="tgrp">' + (z.img ? '<button type="button" data-a="img">Foto</button>' : '') + '<button type="button" data-a="undo">Undo</button>' +
+      (big ? '' : '<button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button>') + '</span>';
   }
   function paintTools(root, d, z) {
-    if (!root || z.sig) return;
+    if (!root) return;
     var o = optOf(d, z);
     root.querySelectorAll('.tl').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-t') === o.t); });
     root.querySelectorAll('.sw').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-c').toLowerCase() === o.col.toLowerCase()); });
@@ -28448,23 +28782,37 @@ var XLF = (function () {
     var lw = root.querySelector('[data-a="lw"]'); if (lw) lw.value = o.lw;
     var lv = root.querySelector('.lwv'); if (lv) lv.textContent = o.lw;
     var ds = root.querySelector('.dsh'); if (ds) ds.classList.toggle('on', !!o.dash);
+    var em = root.querySelector('[data-a="eraseMode"]'); if (em) em.value = o.eraseMode || 'object';
+    var es = root.querySelector('[data-a="eraserSize"]'); if (es) es.value = o.eraserSize || 36;
+    var el = root.querySelector('.eraser-size-label'); if (el) el.textContent = (o.eraserSize || 36) + ' px';
   }
   function wireTools(root, getD, z, act) {
-    root.addEventListener('click', function (e) {
-      var b = e.target.closest('button'); if (!b || !root.contains(b)) return;
-      var d = getD(), o = optOf(d, z);
-      if (b.classList.contains('tl')) o.t = b.getAttribute('data-t');
-      else if (b.classList.contains('sw')) o.col = b.getAttribute('data-c');
-      else if (b.getAttribute('data-a') === 'dash') o.dash = !o.dash;
-      else { act(b.getAttribute('data-a')); return; }
-      paintTools(root, d, z); save();
-    });
-    root.addEventListener('input', function (e) {
+    function updateValue(e) {
       var a = e.target.getAttribute('data-a'), d = getD(), o = optOf(d, z);
       if (a === 'col') o.col = e.target.value;
       if (a === 'lw') o.lw = +e.target.value;
+      if (a === 'eraseMode') o.eraseMode = e.target.value === 'manual' ? 'manual' : 'object';
+      if (a === 'eraserSize') o.eraserSize = Math.max(8, Math.min(64, +e.target.value || 36));
+      paintTools(root, d, z); save();
+    }
+    root.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b || !root.contains(b)) return;
+      var d = getD(), o = optOf(d, z);
+      if (b.classList.contains('tl')) {
+        o.t = b.getAttribute('data-t');
+        var menu = root.querySelector('.eraser-options');
+        if (menu) menu.style.display = o.t === 'eraser' ? (menu.style.display === 'flex' ? 'none' : 'flex') : 'none';
+      } else if (b.classList.contains('sw')) o.col = b.getAttribute('data-c');
+      else if (b.getAttribute('data-a') === 'dash') o.dash = !o.dash;
+      else if (b.getAttribute('data-a') === 'undo') {
+        d.undoStack = d.undoStack || [];
+        if (d.undoStack.length) d.strokes = d.undoStack.pop(); else d.strokes.pop();
+        paintTools(root, d, z); save(); if (act) act('redraw'); return;
+      } else { act(b.getAttribute('data-a')); return; }
       paintTools(root, d, z); save();
     });
+    root.addEventListener('input', updateValue);
+    root.addEventListener('change', updateValue);
   }
   function buildDraw(f, i, z, ovl) {
     S[f][i] = S[f][i] || blank();
@@ -28578,36 +28926,48 @@ var XLF = (function () {
     box.classList.toggle('has', !!(d.strokes.length || d.img)); box.classList.toggle('has-photo', !!d.img);
   }
   function attachPad(cv, getD, z, onEnd, onMove) {
-    var cur = null;
+    var cur = null, eraseBefore = null;
+    var host = cv.parentNode, target = document.createElement('div');
+    target.style.cssText = 'display:none;position:absolute;width:36px;height:36px;transform:translate(-50%,-50%);border:2px solid #ef4444;border-radius:50%;background:rgba(239,68,68,.13);box-sizing:border-box;box-shadow:0 0 0 1px #fff,0 0 5px #dc2626;pointer-events:none;z-index:50';
+    host.appendChild(target);
     function pt(e) { var r = cv.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; }
-    cv.addEventListener('pointerdown', function (e) {
-      if (e.pointerType === 'touch' && !e.isPrimary) return;
-      // layar sentuh: ketukan pertama hanya memunculkan alat, belum menggambar
-      var bx = cv.parentNode;
-      if (bx.classList.contains('xd') && !bx.classList.contains('act') && e.pointerType !== 'mouse') return;
-      if (bx.classList.contains('xann') && z.img && !getD().img) return;
-      e.preventDefault();
-      var d = getD(), o = optOf(d, z), p = pt(e);
-      if (o.t === 'text' && !z.sig) {
-        var t = prompt('Teks anotasi:'); if (!t || !t.trim()) return;
-        d.strokes.push({ t: 'text', a: p, s: t.trim(), col: o.col, lw: o.lw }); if (onEnd) onEnd(); return;
-      }
-      cv.setPointerCapture(e.pointerId);
-      cur = (o.t === 'pen' || z.sig) ? { t: 'pen', p: [p], col: o.col, lw: o.lw, dash: !z.sig && o.dash }
-                                     : { t: o.t, a: p, b: p, col: o.col, lw: o.lw, dash: o.dash };
-      d.strokes.push(cur); if (onMove) onMove();
-    });
-    cv.addEventListener('pointermove', function (e) {
-      if (!cur) return; e.preventDefault();
-      if (cur.t === 'pen') cur.p.push(pt(e)); else cur.b = pt(e);
-      if (onMove) onMove();
-    });
-    function end() {
-      if (!cur) return;
-      if (cur.t !== 'pen' && Math.abs(cur.a[0] - cur.b[0]) + Math.abs(cur.a[1] - cur.b[1]) < .004) getD().strokes.pop();
-      cur = null; if (onEnd) onEnd();
+    function clone(v) { return JSON.parse(JSON.stringify(v || [])); }
+    function pathOf(st) {
+      if (st.t === 'pen') return st.p || [];
+      if (st.t === 'rect' && st.a && st.b) return [[st.a[0],st.a[1]],[st.b[0],st.a[1]],[st.b[0],st.b[1]],[st.a[0],st.b[1]],[st.a[0],st.a[1]]];
+      if (st.t === 'ellipse' && st.a && st.b) { var out=[],cx=(st.a[0]+st.b[0])/2,cy=(st.a[1]+st.b[1])/2,rx=Math.abs(st.b[0]-st.a[0])/2,ry=Math.abs(st.b[1]-st.a[1])/2; for(var n=0;n<=32;n++){var a=n*Math.PI/16;out.push([cx+Math.cos(a)*rx,cy+Math.sin(a)*ry]);} return out; }
+      return [st.a, st.b].filter(Boolean);
     }
-    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    function distToSegment(p,a,b,r) { var px=p[0]*r.width,py=p[1]*r.height,ax=a[0]*r.width,ay=a[1]*r.height,bx=b[0]*r.width,by=b[1]*r.height,dx=bx-ax,dy=by-ay,t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/(dx*dx+dy*dy||1))); return Math.hypot(px-(ax+t*dx),py-(ay+t*dy)); }
+    function touches(points,p,radius,r) { if(!points.length)return false; if(points.length===1)return Math.hypot((points[0][0]-p[0])*r.width,(points[0][1]-p[1])*r.height)<=radius; for(var i=1;i<points.length;i++)if(distToSegment(p,points[i-1],points[i],r)<=radius)return true; return false; }
+    function cutPen(st,p,radius,r) {
+      var points=st.p||[],parts=[],part=[],hit=false;if(!points.length)return{hit:false,parts};
+      function inside(q){return Math.hypot((q[0]-p[0])*r.width,(q[1]-p[1])*r.height)<=radius;}
+      if(points.length===1)return{hit:inside(points[0]),parts};
+      function push(q){if(inside(q)){hit=true;if(part.length>1)parts.push(part);part=[];}else{var last=part[part.length-1];if(!last||Math.hypot((q[0]-last[0])*r.width,(q[1]-last[1])*r.height)>.5)part.push(q);}}
+      for(var i=1;i<points.length;i++){var a=points[i-1],b=points[i],len=Math.hypot((b[0]-a[0])*r.width,(b[1]-a[1])*r.height),steps=Math.max(1,Math.ceil(len/Math.max(2,radius*.35)));for(var j=(i===1?0:1);j<=steps;j++){var t=j/steps;push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);}}
+      if(part.length>1)parts.push(part);return{hit:hit,parts:parts};
+    }
+    function eraseAt(p) {
+      var d=getD(),r=cv.getBoundingClientRect(),o=optOf(d,z),radius=Math.max(8,+o.eraserSize||36)/2,kept=[];
+      d.strokes.forEach(function(st){if(o.eraseMode==='manual'&&st.t==='pen'){var cut=cutPen(st,p,radius,r);if(!cut.hit){kept.push(st);return;}cut.parts.forEach(function(seg){kept.push(Object.assign({},st,{p:seg}));});return;}if(!touches(pathOf(st),p,radius,r))kept.push(st);});
+      d.strokes=kept;if(onMove)onMove();
+    }
+    function updateTarget(e,o) { if(!o||o.t!=='eraser'){target.style.display='none';cv.style.cursor='crosshair';return;}var r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*cv.clientWidth,y=(e.clientY-r.top)/r.height*cv.clientHeight,size=Math.max(8,+o.eraserSize||36);if(x<0||y<0||x>cv.clientWidth||y>cv.clientHeight){target.style.display='none';return;}target.style.width=size+'px';target.style.height=size+'px';target.style.left=(cv.offsetLeft+x)+'px';target.style.top=(cv.offsetTop+y)+'px';target.style.display='block';cv.style.cursor='none'; }
+    cv.addEventListener('pointerdown',function(e){
+      if(e.pointerType==='touch'&&!e.isPrimary)return;
+      var bx=cv.parentNode;if(bx.classList.contains('xd')&&!bx.classList.contains('act')&&e.pointerType!=='mouse')return;
+      if(bx.classList.contains('xann')&&z.img&&!getD().img)return;
+      e.preventDefault();var d=getD(),o=optOf(d,z),p=pt(e);
+      if(o.t==='text'&&!z.sig){var t=prompt('Teks anotasi:');if(!t||!t.trim())return;d.undoStack=[];d.strokes.push({t:'text',a:p,s:t.trim(),col:o.col,lw:o.lw});if(onEnd)onEnd();return;}
+      cv.setPointerCapture(e.pointerId);
+      if(o.t==='eraser'){eraseBefore=clone(d.strokes);cur={t:'eraser'};updateTarget(e,o);eraseAt(p);return;}
+      d.undoStack=[];cur=o.t==='pen'||z.sig?{t:'pen',p:[p],col:o.col,lw:o.lw,dash:!z.sig&&o.dash}:{t:o.t,a:p,b:p,col:o.col,lw:o.lw,dash:o.dash};d.strokes.push(cur);if(onMove)onMove();
+    });
+    cv.addEventListener('pointermove',function(e){var o=optOf(getD(),z);updateTarget(e,o);if(!cur)return;e.preventDefault();if(cur.t==='eraser')eraseAt(pt(e));else if(cur.t==='pen')cur.p.push(pt(e));else cur.b=pt(e);if(cur.t!=='eraser'&&onMove)onMove();});
+    cv.addEventListener('pointerleave',function(){if(!cur)target.style.display='none';});
+    function end(){if(!cur)return;var d=getD();if(cur.t==='eraser'){var after=clone(d.strokes);if(eraseBefore&&JSON.stringify(eraseBefore)!==JSON.stringify(after)){d.undoStack=d.undoStack||[];d.undoStack.push(eraseBefore);if(d.undoStack.length>40)d.undoStack.shift();}eraseBefore=null;}else if(cur.t!=='pen'&&Math.abs(cur.a[0]-cur.b[0])+Math.abs(cur.a[1]-cur.b[1])<.004)d.strokes.pop();cur=null;if(onEnd)onEnd();}
+    cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
   }
   function rotatePhoto(d, deg, done) {
     if (!d.img) return;
@@ -30037,6 +30397,19 @@ async function dlAll() {
             htmlc = htmlc.slice(0, headEnd) + '<scr' + 'ipt>' + camc.textContent + '</scr' + 'ipt>' + htmlc.slice(headEnd);
           }
         }
+        // Mode Classic berjalan di iframe tersendiri. Sisipkan penerjemah yang
+        // sama dengan mode New agar pilihan bahasa shell berlaku pada dokumen ini.
+        var dictClassic = document.getElementById('joI18nDict');
+        var engineClassic = document.getElementById('joI18nEngine');
+        var bodyClassic = htmlc.search(/<body[\s>]/i);
+        var headClassic = bodyClassic > -1 ? htmlc.lastIndexOf('</head>', bodyClassic) : htmlc.indexOf('</head>');
+        if (dictClassic && engineClassic && headClassic > -1) {
+          var closeScript = '</scr' + 'ipt>';
+          var i18nClassic = '<scr' + 'ipt>window.__JO_LANG=' + JSON.stringify(joLang) +
+            ';window.__JO_DICT=' + dictClassic.textContent + ';' + closeScript +
+            '<scr' + 'ipt>' + engineClassic.textContent + closeScript;
+          htmlc = htmlc.slice(0, headClassic) + i18nClassic + htmlc.slice(headClassic);
+        }
         event.source.postMessage({ type: 'jo-classic-html', key: kc, html: htmlc }, '*');
       }
       return;
@@ -30144,6 +30517,7 @@ async function dlAll() {
         'var d=e.data;if(d&&d.type==="jo-overlay"&&typeof d.active==="boolean"){' +
           'for(var j=0;j<fr.length;j++)if(fr[j].contentWindow===e.source){window.parent.postMessage(d,"*");return;}' +
         '}' +
+        'if(d&&d.jo==="lang"){for(var k=0;k<fr.length;k++)if(fr[k].contentWindow)fr[k].contentWindow.postMessage(d,"*");return;}' +
         'if(!d||d.type!=="jo-classic-html")return;' +
         'for(var i=0;i<fr.length;i++)if(fr[i].getAttribute("data-jo-classic")===d.key&&!fr[i].srcdoc)fr[i].srcdoc=d.html;});' +
       'Array.prototype.forEach.call(fr,function(f){' +
