@@ -3148,6 +3148,9 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       border: 2px solid rgba(255,255,255,0.35); padding: 0;
     }
     .ann-color.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
+    .ann-color-spectrum { width: 26px; height: 26px; display: inline-block; position: relative; overflow: hidden; border: 2px solid rgba(255,255,255,0.35); border-radius: 50%; cursor: pointer; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+    .ann-color-spectrum input { position: absolute; inset: -3px; width: 32px; height: 32px; border: 0; padding: 0; opacity: 0; cursor: pointer; }
+    .ann-color-spectrum.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
     .ann-width { display: flex; gap: 4px; }
     .ann-width button {
       background: #475569; border: 1px solid #64748b; border-radius: 4px;
@@ -3831,6 +3834,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       <button class="ann-color" id="annCol-#2563eb" style="background:#2563eb" onclick="annSetColor('#2563eb')" title="Biru"></button>
       <button class="ann-color" id="annCol-#ffffff" style="background:#ffffff" onclick="annSetColor('#ffffff')" title="Putih"></button>
       <button class="ann-color" id="annCol-#000000" style="background:#000000" onclick="annSetColor('#000000')" title="Hitam"></button>
+      <label class="ann-color-spectrum" title="Warna bebas (spektrum)"><input id="annColorSpectrum" type="color" value="#dc2626" oninput="annSetColor(this.value)" aria-label="Pilih warna bebas"></label>
     </div>
 
     <div class="ann-grp">
@@ -3851,7 +3855,8 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
 
   <div class="ann-stage">
     <div class="ann-canvas-wrap">
-      <canvas id="annCanvas"></canvas>
+      <canvas id="annCanvas"></canvas>
+
       <div id="annEraserTarget" aria-hidden="true" style="display:none;position:absolute;left:0;top:0;width:36px;height:36px;transform:translate(-50%,-50%);border:2px solid #ef4444;border-radius:50%;background:rgba(239,68,68,.13);box-sizing:border-box;box-shadow:0 0 0 1px #fff,0 0 5px #dc2626;pointer-events:none;z-index:20;"></div>
       <div class="ann-text-editor" id="annTextEditor" style="display:none;">
         <div class="ann-text-toolbar" id="annTextToolbar">
@@ -5307,7 +5312,8 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
         undoStack: [], redoStack: [],
         tool: 'arrow', color: ANN_COLORS[0], width: 2,
         img, W: img.width, H: img.height,
-        cropRect: null, cropDrag: null, cropApplied: false, eraseMode: 'object', eraserSize: 36, eraserBefore: null,
+        cropRect: null, cropDrag: null, cropApplied: false,
+ eraseMode: 'object', eraserSize: 36, eraserBefore: null,
         zoom: 1, fitZoom: 1, textEditing: false, curTextBoxColor: null
       };
       annMoveDrag = null;
@@ -5426,6 +5432,11 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       const el = document.getElementById('annCol-' + x);
       if (el) el.classList.toggle('active', x === c);
     });
+    const spectrum = document.getElementById('annColorSpectrum');
+    if (spectrum) {
+      spectrum.parentElement.classList.toggle('active', ANN_COLORS.indexOf(c) === -1);
+      if (spectrum.value.toLowerCase() !== c.toLowerCase()) spectrum.value = c;
+    }
   }
 
   function annSetWidth(w) {
@@ -7944,6 +7955,9 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       border: 2px solid rgba(255,255,255,0.35); padding: 0;
     }
     .ann-color.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
+    .ann-color-spectrum { width: 26px; height: 26px; display: inline-block; position: relative; overflow: hidden; border: 2px solid rgba(255,255,255,0.35); border-radius: 50%; cursor: pointer; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+    .ann-color-spectrum input { position: absolute; inset: -3px; width: 32px; height: 32px; border: 0; padding: 0; opacity: 0; cursor: pointer; }
+    .ann-color-spectrum.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
     .ann-width { display: flex; gap: 4px; }
     .ann-width button {
       background: #475569; border: 1px solid #64748b; border-radius: 4px;
@@ -8824,6 +8838,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       <button class="ann-color" id="annCol-#2563eb" style="background:#2563eb" onclick="annSetColor('#2563eb')" title="Biru"></button>
       <button class="ann-color" id="annCol-#ffffff" style="background:#ffffff" onclick="annSetColor('#ffffff')" title="Putih"></button>
       <button class="ann-color" id="annCol-#000000" style="background:#000000" onclick="annSetColor('#000000')" title="Hitam"></button>
+      <label class="ann-color-spectrum" title="Warna bebas (spektrum)"><input id="annColorSpectrum" type="color" value="#dc2626" oninput="annSetColor(this.value)" aria-label="Pilih warna bebas"></label>
     </div>
 
     <div class="ann-grp">
@@ -10209,6 +10224,11 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       const el = document.getElementById('annCol-' + x);
       if (el) el.classList.toggle('active', x === c);
     });
+    const spectrum = document.getElementById('annColorSpectrum');
+    if (spectrum) {
+      spectrum.parentElement.classList.toggle('active', ANN_COLORS.indexOf(c) === -1);
+      if (spectrum.value.toLowerCase() !== c.toLowerCase()) spectrum.value = c;
+    }
   }
 
   function annSetWidth(w) {
@@ -12836,6 +12856,9 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
     .ann-tool.active { background: #059669; border-color: #10b981; color: #fff; box-shadow: 0 0 0 2px rgba(16,185,129,0.35); }
     .ann-color { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid rgba(255,255,255,0.35); padding: 0; }
     .ann-color.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
+    .ann-color-spectrum { width: 26px; height: 26px; display: inline-block; position: relative; overflow: hidden; border: 2px solid rgba(255,255,255,0.35); border-radius: 50%; cursor: pointer; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+    .ann-color-spectrum input { position: absolute; inset: -3px; width: 32px; height: 32px; border: 0; padding: 0; opacity: 0; cursor: pointer; }
+    .ann-color-spectrum.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
     .ann-width { display: flex; gap: 4px; }
     .ann-width button { background: #475569; border: 1px solid #64748b; border-radius: 4px; width: 30px; height: 28px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
     .ann-width button.active { background: #059669; border-color: #10b981; }
@@ -13314,6 +13337,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
       <button class="ann-color" id="annCol-#2563eb" style="background:#2563eb" onclick="annSetColor('#2563eb')" title="Biru"></button>
       <button class="ann-color" id="annCol-#ffffff" style="background:#ffffff" onclick="annSetColor('#ffffff')" title="Putih"></button>
       <button class="ann-color" id="annCol-#000000" style="background:#000000" onclick="annSetColor('#000000')" title="Hitam"></button>
+      <label class="ann-color-spectrum" title="Warna bebas (spektrum)"><input id="annColorSpectrum" type="color" value="#dc2626" oninput="annSetColor(this.value)" aria-label="Pilih warna bebas"></label>
     </div>
     <div class="ann-grp">
       <span class="ann-grp-lbl">Tebal</span>
@@ -13331,7 +13355,8 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
   </div>
   <div class="ann-stage">
     <div class="ann-canvas-wrap">
-      <canvas id="annCanvas"></canvas>
+      <canvas id="annCanvas"></canvas>
+
       <div id="annEraserTarget" aria-hidden="true" style="display:none;position:absolute;left:0;top:0;width:36px;height:36px;transform:translate(-50%,-50%);border:2px solid #ef4444;border-radius:50%;background:rgba(239,68,68,.13);box-sizing:border-box;box-shadow:0 0 0 1px #fff,0 0 5px #dc2626;pointer-events:none;z-index:20;"></div>
       <div class="ann-text-editor" id="annTextEditor" style="display:none;">
         <div class="ann-text-toolbar" id="annTextToolbar">
@@ -14628,7 +14653,8 @@ function annRotateCurrent(delta) {
         undoStack: [], redoStack: [],
         tool: 'arrow', color: ANN_COLORS[0], width: 2,
         img, W: img.width, H: img.height,
-        cropRect: null, cropDrag: null, cropApplied: false, eraseMode: 'object', eraserSize: 36, eraserBefore: null,
+        cropRect: null, cropDrag: null, cropApplied: false,
+ eraseMode: 'object', eraserSize: 36, eraserBefore: null,
         zoom: 1, fitZoom: 1, textEditing: false, curTextBoxColor: null
       };
       annMoveDrag = null;
@@ -14745,6 +14771,11 @@ function annRotateCurrent(delta) {
       const el = document.getElementById('annCol-' + x);
       if (el) el.classList.toggle('active', x === c);
     });
+    const spectrum = document.getElementById('annColorSpectrum');
+    if (spectrum) {
+      spectrum.parentElement.classList.toggle('active', ANN_COLORS.indexOf(c) === -1);
+      if (spectrum.value.toLowerCase() !== c.toLowerCase()) spectrum.value = c;
+    }
   }
 
   function annSetWidth(w) {
@@ -17230,6 +17261,9 @@ function annRotateCurrent(delta) {
     .ann-tool.active { background: #0d9488; border-color: #10b981; color: #fff; box-shadow: 0 0 0 2px rgba(16,185,129,0.35); }
     .ann-color { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid rgba(255,255,255,0.35); padding: 0; }
     .ann-color.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
+    .ann-color-spectrum { width: 26px; height: 26px; display: inline-block; position: relative; overflow: hidden; border: 2px solid rgba(255,255,255,0.35); border-radius: 50%; cursor: pointer; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+    .ann-color-spectrum input { position: absolute; inset: -3px; width: 32px; height: 32px; border: 0; padding: 0; opacity: 0; cursor: pointer; }
+    .ann-color-spectrum.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
     .ann-width { display: flex; gap: 4px; }
     .ann-width button { background: #475569; border: 1px solid #64748b; border-radius: 4px; width: 30px; height: 28px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
     .ann-width button.active { background: #0d9488; border-color: #10b981; }
@@ -17768,6 +17802,7 @@ function annRotateCurrent(delta) {
       <button class="ann-color" id="annCol-#2563eb" style="background:#2563eb" onclick="annSetColor('#2563eb')" title="Biru"></button>
       <button class="ann-color" id="annCol-#ffffff" style="background:#ffffff" onclick="annSetColor('#ffffff')" title="Putih"></button>
       <button class="ann-color" id="annCol-#000000" style="background:#000000" onclick="annSetColor('#000000')" title="Hitam"></button>
+      <label class="ann-color-spectrum" title="Warna bebas (spektrum)"><input id="annColorSpectrum" type="color" value="#dc2626" oninput="annSetColor(this.value)" aria-label="Pilih warna bebas"></label>
     </div>
     <div class="ann-grp">
       <span class="ann-grp-lbl">Tebal</span>
@@ -19311,6 +19346,11 @@ function annRotateCurrent(delta) {
       const el = document.getElementById('annCol-' + x);
       if (el) el.classList.toggle('active', x === c);
     });
+    const spectrum = document.getElementById('annColorSpectrum');
+    if (spectrum) {
+      spectrum.parentElement.classList.toggle('active', ANN_COLORS.indexOf(c) === -1);
+      if (spectrum.value.toLowerCase() !== c.toLowerCase()) spectrum.value = c;
+    }
   }
 
   function annSetWidth(w) {
@@ -28033,7 +28073,7 @@ var XLF = (function () {
       '<span class="tgrp">' + SW.map(function (c) { return '<button type="button" class="sw" data-c="' + c + '" style="background:' + c + '"></button>'; }).join('') +
       '<label class="spec" title="Warna bebas (spektrum)"><input type="color" data-a="col"></label></span>' +
       '<span class="tgrp"><label class="lwl" title="Tebal garis">≡<input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label><button type="button" class="dsh" data-a="dash">Putus-putus</button></span>' +
-      '<span class="tgrp"><button type="button" data-a="rotL" title="Putar foto ke kiri">↺</button><button type="button" data-a="rotR" title="Putar foto ke kanan">↻</button><button type="button" data-a="crop" title="Potong foto">Crop</button><button type="button" data-a="img">Foto</button><button type="button" data-a="undo">Undo</button>' +
+      '<span class="tgrp"><button type="button" data-a="rotL" title="Putar foto ke kiri">↺</button><button type="button" data-a="rotR" title="Putar foto ke kanan">↻</button><button type="button" data-a="crop" title="Potong foto">Crop</button><button type="button" data-a="img">Foto</button>' +
       (big ? '' : '<button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button>') + '</span>';
   }
   function eraserHTML() {
@@ -28051,7 +28091,7 @@ var XLF = (function () {
     return '<span class="tgrp">' + TOOLS.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '" title="' + t[2] + '">' + t[1] + '</button>'; }).join('') + eraserHTML() + '</span>' +
       '<span class="tgrp">' + SW.map(function (c) { return '<button type="button" class="sw" data-c="' + c + '" style="background:' + c + '"></button>'; }).join('') + '<label class="spec"><input type="color" data-a="col"></label></span>' +
       '<span class="tgrp"><label class="lwl">≡<input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label><button type="button" class="dsh" data-a="dash">Putus-putus</button></span>' +
-      '<span class="tgrp"><button type="button" data-a="rotL">↺</button><button type="button" data-a="rotR">↻</button><button type="button" data-a="crop">Crop</button><button type="button" data-a="img">Foto</button><button type="button" data-a="undo">Undo</button><button type="button" data-a="clr">Hapus</button></span>';
+      '<span class="tgrp"><button type="button" data-a="rotL">↺</button><button type="button" data-a="rotR">↻</button><button type="button" data-a="crop">Crop</button><button type="button" data-a="img">Foto</button><button type="button" data-a="clr">Hapus</button></span>';
   }
   function paintTools(root, d, z) {
     if (!root) return;
@@ -28065,6 +28105,25 @@ var XLF = (function () {
     var em = root.querySelector('[data-a="eraseMode"]'); if (em) em.value = o.eraseMode || 'object';
     var es = root.querySelector('[data-a="eraserSize"]'); if (es) es.value = o.eraserSize || 36;
     var el = root.querySelector('.eraser-size-label'); if (el) el.textContent = (o.eraserSize || 36) + ' px';
+  }
+  function pushDrawingUndo(d, snapshot) {
+    d.undoStack = Array.isArray(d.undoStack) ? d.undoStack : [];
+    d.undoStack.push(snapshot === undefined ? JSON.parse(JSON.stringify(d.strokes || [])) : snapshot);
+    if (d.undoStack.length > 40) d.undoStack.shift();
+  }
+  function undoDrawing(d) {
+    d.undoStack = Array.isArray(d.undoStack) ? d.undoStack : [];
+    if (d.undoStack.length) {
+      var previous = d.undoStack.pop();
+      if (Array.isArray(previous)) d.strokes = previous;
+      else if (previous && Array.isArray(previous.strokes)) {
+        d.strokes = previous.strokes;
+        if (Object.prototype.hasOwnProperty.call(previous, 'img')) d.img = previous.img;
+      }
+      return true;
+    }
+    if (d.strokes && d.strokes.length) { d.strokes.pop(); return true; }
+    return false;
   }
   function wireTools(root, getD, z, act) {
     function updateValue(e) {
@@ -28085,8 +28144,7 @@ var XLF = (function () {
       } else if (b.classList.contains('sw')) o.col = b.getAttribute('data-c');
       else if (b.getAttribute('data-a') === 'dash') o.dash = !o.dash;
       else if (b.getAttribute('data-a') === 'undo') {
-        d.undoStack = d.undoStack || [];
-        if (d.undoStack.length) d.strokes = d.undoStack.pop(); else d.strokes.pop();
+        undoDrawing(d);
         paintTools(root, d, z); save(); if (act) act('redraw'); return;
       } else { act(b.getAttribute('data-a')); return; }
       paintTools(root, d, z); save();
@@ -28206,12 +28264,67 @@ var XLF = (function () {
     render(cv, d, z); box.classList.toggle('has', !!(d.strokes.length || d.img)); box.classList.toggle('has-photo', !!d.img);
   }
   function attachPad(cv, getD, z, onEnd, onMove) {
-    var cur = null, eraseBefore = null;
+    var cur = null, eraseBefore = null, textDrag = null, curUndoPushed = false, textEditIndex = null;
     var host = cv.parentNode, target = document.createElement('div');
     target.style.cssText = 'display:none;position:absolute;width:36px;height:36px;transform:translate(-50%,-50%);border:2px solid #ef4444;border-radius:50%;background:rgba(239,68,68,.13);box-sizing:border-box;box-shadow:0 0 0 1px #fff,0 0 5px #dc2626;pointer-events:none;z-index:50';
     host.appendChild(target);
+    var textEditor = document.createElement('div');
+    textEditor.style.cssText = 'display:none;position:absolute;z-index:60;min-width:140px;max-width:280px;padding:5px;background:#fff;border:1px solid #3b82f6;border-radius:5px;box-shadow:0 3px 12px rgba(15,23,42,.28);';
+    var textInput = document.createElement('textarea');
+    textInput.placeholder = 'Ketik di sini...';
+    textInput.style.cssText = 'display:block;box-sizing:border-box;width:100%;min-width:130px;min-height:54px;resize:both;padding:6px;border:1px dashed #3b82f6;border-radius:3px;font:600 14px Arial,sans-serif;color:#111827;';
+    var textActions = document.createElement('div');
+    textActions.style.cssText = 'display:flex;justify-content:flex-end;gap:4px;margin-top:4px;';
+    var textSave = document.createElement('button'), textCancel = document.createElement('button');
+    textSave.type = textCancel.type = 'button'; textSave.textContent = '✓'; textCancel.textContent = '✕';
+    textSave.title = 'Simpan teks'; textCancel.title = 'Batal';
+    [textSave, textCancel].forEach(function (b) { b.style.cssText = 'border:0;border-radius:4px;padding:3px 9px;cursor:pointer;font-weight:700;'; });
+    textSave.style.background = '#059669'; textSave.style.color = '#fff'; textCancel.style.background = '#fee2e2'; textCancel.style.color = '#b91c1c';
+    textActions.appendChild(textSave); textActions.appendChild(textCancel);
+    textEditor.appendChild(textInput); textEditor.appendChild(textActions); host.appendChild(textEditor);
     function pt(e) { var r = cv.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; }
     function clone(v) { return JSON.parse(JSON.stringify(v || [])); }
+    function textHit(p) {
+      var d = getD(), r = cv.getBoundingClientRect(), x = p[0] * r.width, y = p[1] * r.height, ctx = cv.getContext('2d');
+      for (var i = d.strokes.length - 1; i >= 0; i--) {
+        var st = d.strokes[i]; if (st.t !== 'text' || !st.a) continue;
+        var fs = Math.max(11, (st.lw || 2) * 6) * (cv.width / z.w), lines = String(st.s || '').split('\n'), maxW = 0;
+        ctx.save(); ctx.font = '700 ' + fs + 'px Arial,sans-serif';
+        lines.forEach(function (line) { maxW = Math.max(maxW, ctx.measureText(line).width); }); ctx.restore();
+        var left = st.a[0] * r.width, top = st.a[1] * r.height;
+        var width = Math.max(18, maxW / cv.width * r.width), height = Math.max(16, lines.length * fs * 1.15 / cv.height * r.height);
+        if (x >= left - 5 && x <= left + width + 5 && y >= top - 5 && y <= top + height + 5) return i;
+      }
+      return -1;
+    }
+    function closeTextEditor() { textEditor.style.display = 'none'; textEditIndex = null; textInput.value = ''; }
+    function openTextEditor(index, p) {
+      var d = getD(), shape = index == null ? null : d.strokes[index], anchor = shape ? shape.a : p;
+      textEditIndex = shape ? index : null;
+      textInput.value = shape ? (shape.s || '') : '';
+      var left = Math.max(0, Math.min(host.clientWidth - 140, anchor[0] * cv.clientWidth));
+      var top = Math.max(0, Math.min(host.clientHeight - 76, anchor[1] * cv.clientHeight));
+      textEditor.style.left = left + 'px'; textEditor.style.top = top + 'px'; textEditor.style.display = 'block';
+      textInput.style.width = Math.max(130, Math.min(270, host.clientWidth - left - 8)) + 'px';
+      textInput.focus(); textInput.setSelectionRange(textInput.value.length, textInput.value.length);
+    }
+    function commitText() {
+      var d = getD(), value = (textInput.value || '').trim(), index = textEditIndex;
+      if (index != null) {
+        var before = clone(d.strokes);
+        if (!value) d.strokes.splice(index, 1);
+        else d.strokes[index].s = value;
+        if (JSON.stringify(before) !== JSON.stringify(d.strokes)) pushDrawingUndo(d, before);
+      } else if (value) {
+        pushDrawingUndo(d);
+        var o = optOf(d, z), rect = textEditor.getBoundingClientRect(), hostRect = host.getBoundingClientRect();
+        d.strokes.push({ t: 'text', a: [Math.max(0, (rect.left - hostRect.left) / cv.clientWidth), Math.max(0, (rect.top - hostRect.top) / cv.clientHeight)], s: value, col: o.col, lw: o.lw });
+      }
+      closeTextEditor(); if (onEnd) onEnd();
+    }
+    textSave.addEventListener('click', commitText);
+    textCancel.addEventListener('click', function () { closeTextEditor(); });
+    textInput.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); commitText(); } });
     function pathOf(st) {
       if (st.t === 'pen') return st.p || [];
       if (st.t === 'rect' && st.a && st.b) return [[st.a[0],st.a[1]],[st.b[0],st.a[1]],[st.b[0],st.b[1]],[st.a[0],st.b[1]],[st.a[0],st.a[1]]];
@@ -28238,15 +28351,23 @@ var XLF = (function () {
       if(e.pointerType==='touch'&&!e.isPrimary)return;
       var bx=cv.parentNode;if(bx.classList.contains('xd')&&!bx.classList.contains('act')&&e.pointerType!=='mouse')return;
       e.preventDefault();var d=getD(),o=optOf(d,z),p=pt(e);
-      if(o.t==='text'&&!z.sig){var t=prompt('Teks anotasi:');if(!t||!t.trim())return;d.undoStack=[];d.strokes.push({t:'text',a:p,s:t.trim(),col:o.col,lw:o.lw});if(onEnd)onEnd();return;}
+      var hitText = !z.sig ? textHit(p) : -1;
+      if (hitText >= 0) {
+        if (e.detail >= 2) { textDrag = null; openTextEditor(hitText, p); return; }
+        var hitShape = d.strokes[hitText];
+        textDrag = { index: hitText, start: p, anchor: hitShape.a.slice(), before: null, moved: false };
+        cv.setPointerCapture(e.pointerId); return;
+      }
+      if(o.t==='text'&&!z.sig){openTextEditor(null,p);return;}
       cv.setPointerCapture(e.pointerId);
       if(o.t==='eraser'){eraseBefore=clone(d.strokes);cur={t:'eraser'};updateTarget(e,o);eraseAt(p);return;}
-      d.undoStack=[];cur=o.t==='pen'||z.sig?{t:'pen',p:[p],col:o.col,lw:o.lw,dash:!z.sig&&o.dash}:{t:o.t,a:p,b:p,col:o.col,lw:o.lw,dash:o.dash};d.strokes.push(cur);if(onMove)onMove();
+      pushDrawingUndo(d);curUndoPushed=true;cur=o.t==='pen'||z.sig?{t:'pen',p:[p],col:o.col,lw:o.lw,dash:!z.sig&&o.dash}:{t:o.t,a:p,b:p,col:o.col,lw:o.lw,dash:o.dash};d.strokes.push(cur);if(onMove)onMove();
     });
-    cv.addEventListener('pointermove', function(e){var o=optOf(getD(),z);updateTarget(e,o);if(!cur)return;e.preventDefault();if(cur.t==='eraser')eraseAt(pt(e));else if(cur.t==='pen')cur.p.push(pt(e));else cur.b=pt(e);if(cur.t!=='eraser'&&onMove)onMove();});
+    cv.addEventListener('pointermove', function(e){var o=optOf(getD(),z);updateTarget(e,o);if(textDrag){var p=pt(e),dx=p[0]-textDrag.start[0],dy=p[1]-textDrag.start[1];if(!textDrag.moved&&Math.abs(dx)+Math.abs(dy)>.004){textDrag.before=clone(getD().strokes);textDrag.moved=true;pushDrawingUndo(getD(),textDrag.before);}if(textDrag.moved){var st=getD().strokes[textDrag.index];st.a=[Math.max(0,Math.min(1,textDrag.anchor[0]+dx)),Math.max(0,Math.min(1,textDrag.anchor[1]+dy))];if(onMove)onMove();}return;}if(!cur)return;e.preventDefault();if(cur.t==='eraser')eraseAt(pt(e));else if(cur.t==='pen')cur.p.push(pt(e));else cur.b=pt(e);if(cur.t!=='eraser'&&onMove)onMove();});
     cv.addEventListener('pointerleave',function(){if(!cur)target.style.display='none';});
-    function end(){if(!cur)return;var d=getD();if(cur.t==='eraser'){var after=clone(d.strokes);if(eraseBefore&&JSON.stringify(eraseBefore)!==JSON.stringify(after)){d.undoStack=d.undoStack||[];d.undoStack.push(eraseBefore);if(d.undoStack.length>40)d.undoStack.shift();}eraseBefore=null;}else if(cur.t!=='pen'&&Math.abs(cur.a[0]-cur.b[0])+Math.abs(cur.a[1]-cur.b[1])<.004)d.strokes.pop();cur=null;if(onEnd)onEnd();}
+    function end(){if(textDrag){var moved=textDrag.moved;textDrag=null;if(moved&&onEnd)onEnd();return;}if(!cur)return;var d=getD();if(cur.t==='eraser'){var after=clone(d.strokes);if(eraseBefore&&JSON.stringify(eraseBefore)!==JSON.stringify(after))pushDrawingUndo(d,eraseBefore);eraseBefore=null;}else if(cur.t!=='pen'&&Math.abs(cur.a[0]-cur.b[0])+Math.abs(cur.a[1]-cur.b[1])<.004){d.strokes.pop();if(curUndoPushed&&d.undoStack.length)d.undoStack.pop();}cur=null;curUndoPushed=false;if(onEnd)onEnd();}
     cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+    cv.addEventListener('dblclick', function(e) { var p=pt(e), index=textHit(p); if(index<0 || (textEditor.style.display==='block' && textEditIndex===index)) return; e.preventDefault(); textDrag=null; openTextEditor(index,p); });
   }
   function mapStrokePoint(p, map) { if (p) { var q = map(p[0], p[1]); p[0] = q[0]; p[1] = q[1]; } }
   function rotateImage(d, deg, done) {
@@ -28308,12 +28429,19 @@ var XLF = (function () {
     var W = Math.min(maxW, maxH / asp), H = W * asp;
     var ov = el('div', 'xpop');
     ov.innerHTML = '<div class="box"><h3>' + (z.sig ? 'Tanda tangan — ' : 'Anotasi — ') + z.label + '</h3>' +
-      '<div class="xtools big">' + toolsHTML(z, true) + '</div><canvas></canvas>' +
-      '<div class="row"><button type="button" class="clr">Hapus semua</button>' + (z.sig ? '<button type="button" class="und">↶ Undo</button>' : '') +
+      '<div class="xtools big">' + toolsHTML(z, true) + '</div><div class="classic-canvas-wrap" style="position:relative;display:inline-block;vertical-align:top"><canvas></canvas></div>' +
+      '<div class="row"><button type="button" class="clr">Hapus semua</button><button type="button" class="undo" title="Batalkan anotasi (Ctrl+Z)">Undo</button>' +
       '<span style="flex:1"></span><button type="button" class="no">Batal</button><button type="button" class="ok">✓ Simpan</button></div></div>';
     document.body.appendChild(ov);
     var cv = ov.querySelector('canvas'); cv.style.width = W + 'px'; cv.style.height = H + 'px'; size(cv, W, H);
     function pnt() { render(cv, d, z); }
+    function onUndoKey(e) {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z' || !ov.isConnected) return;
+      if (document.activeElement && document.activeElement.tagName === 'TEXTAREA' && ov.contains(document.activeElement)) return;
+      if (document.querySelector('.crop-canvas')) return;
+      e.preventDefault(); if (undoDrawing(d)) pnt();
+    }
+    document.addEventListener('keydown', onUndoKey, true);
     pnt(); attachPad(cv, function () { return d; }, z, pnt, pnt);
     var tl = ov.querySelector('.xtools');
     if (tl) { wireTools(tl, function () { return d; }, z, function (a) {
@@ -28323,11 +28451,11 @@ var XLF = (function () {
         if (a === 'rotR') rotateImage(d,90,pnt);
         if (a === 'crop') cropImage(d,pnt);
       }); paintTools(tl, d, z); }
-    ov.querySelector('.clr').onclick = function () { d.strokes = []; d.img = null; pnt(); };
-    var u = ov.querySelector('.und'); if (u) u.onclick = function () { d.strokes.pop(); pnt(); };
-    ov.querySelector('.no').onclick = function () { ov.remove(); };
+    ov.querySelector('.clr').onclick = function () { if (!d.strokes.length && !d.img) return; pushDrawingUndo(d, { strokes: JSON.parse(JSON.stringify(d.strokes || [])), img: d.img || null }); d.strokes = []; d.img = null; pnt(); };
+    ov.querySelector('.undo').onclick = function () { if (undoDrawing(d)) pnt(); };
+    ov.querySelector('.no').onclick = function () { document.removeEventListener('keydown', onUndoKey, true); ov.remove(); };
     ov.querySelector('.ok').onclick = function () {
-      var kk = z.shared ? 0 : k; D(kk)[i] = d; ov.remove(); drawPaint(k, i);
+      var kk = z.shared ? 0 : k; D(kk)[i] = d; document.removeEventListener("keydown", onUndoKey, true); ov.remove(); drawPaint(k, i);
       var bx = document.getElementById(zid(k, i)); if (bx) paintTools(bx.querySelector('.xtools'), d, z);
       if (z.shared) mirrorAll(i); save();
     };
