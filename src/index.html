@@ -27593,6 +27593,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   td.zt:focus-within { background: #fef3c7; box-shadow: inset 0 0 0 1px #f59e0b; }
   td.zt.mirror { background: #f1f5f9; cursor: default; }
   .ce { position: absolute; inset: 0; padding: 1px 4px; outline: none; overflow: hidden; white-space: nowrap; display: flex; align-items: center; }
+  .ce.manual-edit { background: #fef3c7; }
   .ce.multi { display: block; white-space: pre-wrap; overflow-y: auto; overflow-wrap: anywhere; padding-top: 3px; }
   .ce.a-center { justify-content: center; text-align: center; }
   .ce.multi.a-center { display: flex; align-items: center; justify-content: center; }
@@ -27699,6 +27700,46 @@ var XLF = (function () {
   function D(k) { return S.d[k] = S.d[k] || {}; }
   function val(k, i) { var z = F.zones[i]; return z.shared ? D(0)[i] : D(k)[i]; }
 
+  // Inspector dan finish date pada mode Classic mengikuti temuan pertama
+  // (row 1), tetapi setiap temuan tetap dapat diubah sebagai pengecualian.
+  // Metadata override disimpan terpisah agar nilai yang diekspor tetap string.
+  function autoKey(z) {
+    if (z.ph === 'nama') return 'inspector';
+    if (z.ph === 'tgl selesai') return 'finish';
+    return null;
+  }
+  function autoZones(key) {
+    return F.zones.map(function (z, i) { return autoKey(z) === key ? i : -1; })
+      .filter(function (i) { return i >= 0; });
+  }
+  function autoSourceIndex(key) {
+    return autoZones(key).reduce(function (best, i) {
+      return best == null || F.zones[i].r1 < F.zones[best].r1 ? i : best;
+    }, null);
+  }
+  function autoManual(k, i, on) {
+    S.m = S.m || {};
+    var id = k + ':' + i;
+    if (on) S.m[id] = 1; else delete S.m[id];
+  }
+  function isAutoManual(k, i) { return !!(S.m && S.m[k + ':' + i]); }
+  function propagateAuto(key) {
+    var source = autoSourceIndex(key);
+    if (source == null) return;
+    var value = D(0)[source] || '';
+    autoZones(key).forEach(function (i) {
+      if (i === source || isAutoManual(0, i)) return;
+      D(0)[i] = value;
+    });
+    // Zone yang sama pada halaman berikutnya memiliki nomor temuan yang sama.
+    for (var k = 0; k < S.pages; k++) {
+      F.zones.forEach(function (z, i) {
+        if (autoKey(z) !== key || (k === 0 && i === source) || isAutoManual(k, i)) return;
+        D(k)[i] = value;
+      });
+    }
+  }
+
   /* ---------------- halaman ---------------- */
   function buildPage(k) {
     var wrap = el('div'); wrap.innerHTML = TPL;
@@ -27728,13 +27769,25 @@ var XLF = (function () {
       if (z.ph) ce.setAttribute('data-ph', z.ph);
       td.appendChild(ce);
       if (mirror) { ce.title = 'Mengikuti halaman 1'; return; }
+      var ak = autoKey(z), source = ak == null ? null : autoSourceIndex(ak);
+      if (ak && !(k === 0 && i === source) && !D(k)[i] && source != null && D(0)[source]) {
+        D(k)[i] = D(0)[source];
+      }
+      if (ak && isAutoManual(k, i)) ce.classList.add('manual-edit');
       ce.contentEditable = 'true'; ce.spellcheck = false;
       td.addEventListener('mousedown', function (e) { if (e.target === td) { e.preventDefault(); ce.focus(); } });
       ce.addEventListener('input', function () {
         D(k)[i] = ce.innerText.replace(/\n$/, '');
-        if (z.ph === 'tgl selesai') {
-          var mate = F.zones.findIndex(function (other, oi) { return oi !== i && other.ph === z.ph && other.r1 !== z.r1; });
-          if (mate >= 0) { D(k)[mate] = D(k)[i]; paint(k, mate); }
+        if (ak) {
+          if (k === 0 && i === source) {
+            propagateAuto(ak);
+            for (var pk = 0; pk < S.pages; pk++) F.zones.forEach(function (other, oi) {
+              if (autoKey(other) === ak) paint(pk, oi);
+            });
+          } else {
+            autoManual(k, i, true);
+            ce.classList.add('manual-edit');
+          }
         }
         save(); if (z.shared) mirrorAll(i);
       });
