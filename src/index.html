@@ -12759,7 +12759,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') howt
     .toast .toast-act:hover { background: rgba(255,255,255,0.35); }
 
     /* ===== TOMBOL & POPUP PANDUAN ===== */
-    .btn-help { position: fixed; top: 20px; left: 20px; z-index: 9990; background: #047857; color: #fff; border: none; border-radius: 22px; padding: 9px 17px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 3px 12px rgba(4,120,87,0.35); white-space: nowrap; transition: 0.15s; }
+    .btn-help { position: relative; top: auto; left: auto; z-index: 9990; margin: 8px 0 8px 16px; background: #047857; color: #fff; border: none; border-radius: 22px; padding: 9px 17px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 3px 12px rgba(4,120,87,0.35); white-space: nowrap; transition: 0.15s; }
     .btn-help:hover { background: #065f46; transform: translateY(-2px); }
     .btn-help .ico { background: #fff; color: #047857; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
     @media (max-width: 1530px) { .btn-help { padding: 9px 11px; } .btn-help .label { display: none; } }
@@ -28505,7 +28505,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .xd.xann canvas { pointer-events:none; }
   .xd.xann .xtools .tgrp.photo-tools { display:none !important; }
   .xd.xann .xtools .tgrp:not(.photo-tools):not(:nth-last-child(2)) { display:none !important; }
-  .xd.xsig .xtools { top: auto; bottom: 2px; }
+  .xd.xsig { cursor: pointer; }
+  .xd.xsig canvas { pointer-events: none; }
+  .xd.xsig .xtools { display: none !important; }
   .xhint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; color: #94a3b8; font: 12px 'Segoe UI', Arial, sans-serif; text-align: center; padding: 0 6px; }
   .xd.has .xhint { display: none; }
   .xtools { position: absolute; top: 2px; right: 2px; display: flex; gap: 3px; z-index: 4; }
@@ -28816,7 +28818,9 @@ var XLF = (function () {
       '<label style="display:inline-flex;gap:4px;align-items:center;">Ukuran <input type="range" min="8" max="64" step="2" value="36" data-a="eraserSize" style="width:84px"><span class="eraser-size-label">36 px</span></label></span></span>';
   }
   function toolsHTML(z, big) {
-    if (z.sig) return '<span class="tgrp">' + eraserHTML() + '</span>' + (big ? '' : '<button type="button" data-a="undo">Undo</button><button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button>');
+    if (z.sig) return '<span class="tgrp">' + TOOLS.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '">' + t[1] + '</button>'; }).join('') + eraserHTML() + '</span>' +
+      '<span class="tgrp"><label class="spec" title="Warna tanda tangan"><input type="color" data-a="col"></label><label class="lwl" title="Tebal garis">Tebal <input type="range" min="1" max="10" step="0.5" data-a="lw"><b class="lwv"></b></label></span>' +
+      (big ? '' : '<button type="button" data-a="undo">Undo</button><button type="button" data-a="big">Perbesar</button><button type="button" data-a="clr">Hapus</button>');
     if (!big) return '<span class="tgrp">' + (z.img ? '<button type="button" data-a="img" title="Sisipkan / ganti foto">Foto</button>' : '') +
       '<button type="button" data-a="big" title="Editor besar">Perbesar</button><button type="button" data-a="clr" title="Hapus semua">Hapus</button></span>';
     return '<span class="tgrp">' + TOOLS.map(function (t) { return '<button type="button" class="tl" data-t="' + t[0] + '" title="' + t[2] + '">' + t[1] + '</button>'; }).join('') + eraserHTML() + '</span>' +
@@ -28903,6 +28907,10 @@ var XLF = (function () {
     box.addEventListener('pointerdown', function () {
       document.querySelectorAll('.xd.act').forEach(function (b) { if (b !== box) b.classList.remove('act'); });
       box.classList.add('act');
+    });
+    if (z.sig) box.addEventListener('click', function (e) {
+      if (e.target.closest('.xtools')) return;
+      popup(f, i);
     });
     if (z.img) box.addEventListener('click', function (e) {
       if (e.target.closest('.xtools')) return;
@@ -29076,7 +29084,7 @@ var XLF = (function () {
     var W = Math.min(maxW, maxH / asp), H = W * asp;
     var ov = el('div', 'xpop');
     ov.innerHTML = '<div class="box"><h3>' + (z.sig ? 'Tanda tangan — ' : 'Anotasi — ') + z.label + '</h3>' +
-      (z.sig ? '' : '<div class="xtools big">' + toolsHTML(z, true) + '</div>') + '<canvas></canvas>' +
+      '<div class="xtools big">' + toolsHTML(z, true) + '</div><canvas></canvas>' +
       '<div class="row"><button type="button" class="clr">Hapus semua</button>' + (z.sig ? '<button type="button" class="und">↶ Undo</button>' : '') +
       '<span style="flex:1"></span><button type="button" class="no">Batal</button><button type="button" class="ok">✓ Simpan</button></div></div>';
     document.body.appendChild(ov);
