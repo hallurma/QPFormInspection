@@ -349,6 +349,17 @@
     border-radius: 0 6px 6px 0; padding: 9px 13px;
     font-size: 11px; color: #854d0e; line-height: 1.55;
   }
+  .jo-download {
+    display: flex; align-items: center; gap: 11px;
+    width: min(700px, calc(100% - 24px)); margin: 14px auto 0; padding: 11px 15px;
+    border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px;
+    background: #eff6ff; color: #1e3a8a; text-decoration: none;
+  }
+  .jo-download:hover { background: #dbeafe; }
+  .jo-download .icon { flex: 0 0 auto; font-size: 21px; }
+  .jo-download strong { display: block; font-size: 13px; }
+  .jo-download small { display: block; margin-top: 2px; color: #475569; font-size: 11px; }
+  .jo-download .arrow { margin-left: auto; font-weight: 700; }
 
 
   .jo-mode-control { display: flex; align-items: center; gap: 7px; padding: 4px 8px; border: 1px solid #475569; border-radius: 8px; color: #e2e8f0; font-size: 11px; font-weight: 700; white-space: nowrap; }
@@ -520,6 +531,11 @@
     </button>
   <button class="jo-card h" onclick="joOpen('h')"><span class="no">FORM QP-006-08 (a), 006-06 (c), 006-08 (d)</span><h2>Pengecoran 3-in-1</h2><p>Form pengecoran terintegrasi untuk pemeriksaan dan dokumentasi pekerjaan.</p><div class="go">Buka form ini &rarr;</div></button>
   </div>
+  <a class="jo-download" data-noi18n href="https://github.com/hallurma/QPFormInspection/releases/latest" target="_blank" rel="noopener noreferrer">
+    <span class="icon" aria-hidden="true">&#11015;</span>
+    <span><strong>Unduh aplikasi desktop (Tauri)</strong><small>Installer Windows tersedia di halaman rilis (.exe / .msi)</small></span>
+    <span class="arrow" aria-hidden="true">&rarr;</span>
+  </a>
     <div class="jo-note">
     <b>Keenam modul berjalan terpisah sepenuhnya.</b> Tombol Generate Excel di satu form
     tidak bisa menyentuh isi modul yang lain &mdash; masing-masing punya draft,
@@ -810,7 +826,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <div class="bar">
   <h1>Paket Pengecoran <span>— 3 form dalam 1 berkas</span></h1>
-  <nav class="jump"><a href="#hal1">1 · Before Pouring</a><a href="#hal2">2 · Rebar Checklist</a><a href="#hal3">3 · Laporan Cor</a></nav>
+  <nav class="jump"><a href="#hal1" onclick="event.preventDefault();document.getElementById('hal1').scrollIntoView({behavior:'smooth',block:'start'});return false;">1 · Before Pouring</a><a href="#hal2" onclick="event.preventDefault();document.getElementById('hal2').scrollIntoView({behavior:'smooth',block:'start'});return false;">2 · Rebar Checklist</a><a href="#hal3" onclick="event.preventDefault();document.getElementById('hal3').scrollIntoView({behavior:'smooth',block:'start'});return false;">3 · Laporan Cor</a></nav>
   <button type="button" class="howto-open" onclick="howtoOpen()">? Cara Pakai</button>
   <span class="sp"></span>
   <span id="msg"></span>
@@ -30404,6 +30420,18 @@ async function dlAll() {
 
   function joLangPaint() {
     var nm = { id: 'ID', en: 'EN', ja: 'JA' };
+    var downloadCopy = {
+      id: ['Unduh aplikasi desktop (Tauri)', 'Installer Windows (.exe / .msi) di GitHub Releases'],
+      en: ['Download the Tauri desktop app', 'Windows installer (.exe / .msi) on GitHub Releases'],
+      ja: ['Tauri デスクトップアプリをダウンロード', 'GitHub Releases から Windows 用インストーラー（.exe / .msi）を入手']
+    }[joLang] || ['Unduh aplikasi desktop (Tauri)', 'Installer Windows (.exe / .msi) di GitHub Releases'];
+    var downloadLink = document.querySelector('.jo-download');
+    if (downloadLink) {
+      var downloadTitle = downloadLink.querySelector('strong');
+      var downloadNote = downloadLink.querySelector('small');
+      if (downloadTitle) downloadTitle.textContent = downloadCopy[0];
+      if (downloadNote) downloadNote.textContent = downloadCopy[1];
+    }
     var pourOption = document.querySelector('#joFormSelect option[value="h"]');
     if (pourOption) pourOption.textContent = joLang === 'en' ? 'Concrete Pouring — QP-006-08 (a), 006-06 (c), 006-08 (d)' :
       joLang === 'ja' ? 'コンクリート打設 — QP-006-08 (a), 006-06 (c), 006-08 (d)' :
@@ -30734,8 +30762,11 @@ async function dlAll() {
         'if(window.ResizeObserver){var ro=new ResizeObserver(function(){if(f.offsetWidth>0&&f.offsetHeight>0){ask(f);ro.disconnect();}});ro.observe(f);}' +
         'else ask(f);});' +
     '})();</scr' + 'ipt>';
-    var bodyEnd = payload.toLowerCase().lastIndexOf('</body>');
-    if (bodyEnd !== -1) payload = payload.slice(0, bodyEnd) + mobileAnnotation + lazyClassic + payload.slice(bodyEnd);
+    var bodyScripts = code === 'g' ? '' : mobileAnnotation;
+    if (code === 'b' || code === 'd') bodyScripts += lazyClassic;
+    // Tambahkan skrip hanya tepat sebelum tag penutup dokumen. Pencarian
+    // lastIndexOf('</body>') bisa cocok dengan teks HTML di dalam kode/library.
+    if (bodyScripts) payload = payload.replace(/<\/body>(\s*<\/html>\s*)$/i, bodyScripts + '</body>$1');
     return payload;
   }
 

@@ -23,3 +23,10 @@ HTML, JavaScript, dan aset aplikasi di GitHub Pages dapat diakses publik jika re
 Foto dan file Excel yang dipilih/dibuat aplikasi tetap diproses di perangkat; service worker hanya
 menyimpan shell aplikasi dan aset statis untuk penggunaan offline. Draft yang disimpan aplikasi
 tetap berada di penyimpanan lokal browser perangkat.
+
+## Rilis aplikasi desktop Tauri
+
+Halaman utama menautkan ke GitHub Releases. Untuk membuat installer Windows
+(.exe dan .msi), push tag versi seperti `v0.1.0`; workflow
+`.github/workflows/tauri-release.yml` akan membangun dan menerbitkan installer
+di halaman Releases.

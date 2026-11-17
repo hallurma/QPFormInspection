@@ -1,0 +1,40 @@
+name: Build and release Tauri app
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build and publish Windows installers
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'QP Form Generator v__VERSION__'
+          releaseBody: 'Installer Windows untuk Jaya Obayashi QC Form Generator. Unduh file .exe atau .msi di bawah ini.'
+          releaseDraft: false
+          prerelease: false
+          args: --target x86_64-pc-windows-msvc
