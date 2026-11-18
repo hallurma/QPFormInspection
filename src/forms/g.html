@@ -1,0 +1,3076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes, minimum-scale=0.25, maximum-scale=5">
+<title>Gantt Chart Schedule Generator</title>
+
+<!-- ================= LIBRARIES (CDN) ================= -->
+<!--JOLIB:xlsx-->
+<!--JOLIB:exceljs-->
+<!--JOLIB:jszip-->
+<!--JOLIB:filesaver-->
+
+<style>
+* { box-sizing: border-box; }
+body { font-family: Calibri, Arial, sans-serif; margin:0; background:#f2f4f7; color:#1c1c1c; font-size:13px; }
+header {
+  display:flex; align-items:center; justify-content:space-between; gap:24px;
+  min-height:48px; padding:7px 16px; color:#fff;
+  background:linear-gradient(110deg,#185b36 0%,#217346 58%,#2b8454 100%);
+  border-bottom:1px solid #155b36; box-shadow:0 2px 5px rgba(15,35,55,.18);
+}
+.headerBrand { display:flex; align-items:center; gap:10px; min-width:0; }
+.headerMark {
+  display:grid; place-items:center; flex:0 0 30px; height:30px;
+  border:1px solid rgba(255,255,255,.38); border-radius:5px;
+  background:rgba(255,255,255,.12); color:#fff; font-size:11px; font-weight:800;
+  letter-spacing:.04em;
+}
+header h1 { margin:0; font-size:15px; line-height:1.2; letter-spacing:.01em; }
+header p { margin:2px 0 0; color:#d7e5e0; font-size:10px; line-height:1.2; }
+.headerTag {
+  flex:0 0 auto; padding:5px 9px; border:1px solid rgba(255,255,255,.25);
+  border-radius:4px; color:#e6f0e8; font-size:10px; font-weight:700;
+  letter-spacing:.08em; white-space:nowrap;
+}
+.projectRibbon { background:#f4f5f6; border-bottom:1px solid #b8bec3; box-shadow:0 2px 4px rgba(20,35,45,.08); }
+.ribbonTabs { display:flex; gap:2px; padding:0 10px; overflow-x:auto; border-bottom:1px solid #c9ced2; }
+.ribbonTab {
+  flex:0 0 auto; padding:9px 13px 8px; border:0; border-top:3px solid transparent;
+  border-radius:0; background:transparent; color:#30363b; font-size:12px; font-weight:500;
+}
+.ribbonTab:hover { background:#e8ecef; color:#1d5e3b; }
+.ribbonTab.active { border-top-color:#217346; background:#fff; color:#1e603c; font-weight:700; }
+.ribbonPanel { display:flex; align-items:stretch; gap:5px; min-height:112px; padding:8px 12px 6px; overflow-x:auto; background:#fff; }
+.ribbonPanel[hidden] { display:none; }
+.ribbonGroup {
+  position:relative; display:flex; flex:0 0 auto; align-items:center; gap:7px;
+  min-height:96px; padding:2px 13px 18px 3px; border-right:1px solid #d7dbde;
+}
+.ribbonGroup:last-child { border-right:0; }
+.ribbonGroupLabel {
+  position:absolute; bottom:0; left:3px; right:13px; padding-top:3px;
+  border-top:1px solid #edf0f2; color:#727b82; text-align:center; font-size:10px; white-space:nowrap;
+}
+.ribbonStack { display:flex; flex-direction:column; gap:6px; }
+.ribbonControl { display:flex; flex-direction:column; gap:4px; min-width:110px; color:#37414a; font-size:10px; }
+.ribbonControl input, .ribbonControl select { width:100%; min-height:27px; padding:4px 6px; font-size:11px; }
+.ribbonPanel button { min-height:29px; padding:5px 9px; font-size:11px; white-space:nowrap; }
+.ribbonPanel .ghost { border-color:#bac2c8; color:#29343d; }
+.ribbonPanel .ghost:hover { background:#edf4ef; border-color:#74a889; }
+.ribbonCheck { display:flex; align-items:center; gap:5px; color:#39444c; font-size:11px; white-space:nowrap; }
+.ribbonCheck input { margin:0; }
+.ribbonDrop { width:225px; padding:9px !important; }
+.ribbonDrop small { font-size:9px; }
+.themeChoices { display:flex; align-items:center; gap:9px; }
+.themeChoice {
+  display:flex; flex-direction:column; align-items:center; gap:5px; min-width:98px;
+  padding:7px 8px !important; border:1px solid #d2d8dc !important; border-radius:5px !important;
+  background:#fff !important; color:#39434b !important; font-size:10px !important; font-weight:600;
+}
+.themeChoice:hover { border-color:#78a88a !important; background:#f5faf6 !important; }
+.themeChoice.active { border:2px solid #217346 !important; padding:6px 7px !important; background:#f2f8f4 !important; }
+.themeSwatch { display:flex; align-items:center; gap:4px; height:23px; }
+.themeSwatch i { display:block; width:29px; height:9px; border:1px solid #777; border-radius:2px; }
+.themeSwatch i:nth-child(2) { width:19px; opacity:.65; }
+.themeChoice[data-theme="category"] .themeSwatch i:nth-child(1) { background:#4472c4; border-color:#315a99; }
+.themeChoice[data-theme="category"] .themeSwatch i:nth-child(2) { background:#ed7d31; border-color:#bd6020; }
+.themeChoice[data-theme="project-blue"] .themeSwatch i { background:#5b9bd5; border-color:#3e79ad; }
+.themeChoice[data-theme="classic-red"] .themeSwatch i { background:#e06666; border-color:#ad4141; }
+.themeChoice[data-theme="modern-teal"] .themeSwatch i { background:#22a6a1; border-color:#167a76; }
+body[data-gantt-theme]:not([data-gantt-theme="category"]) #rightBody .bar {
+  background-color:var(--theme-bar-light) !important; border-color:var(--theme-bar) !important;
+}
+body[data-gantt-theme]:not([data-gantt-theme="category"]) #rightBody .barFill { background-color:var(--theme-bar) !important; }
+body[data-gantt-theme]:not([data-gantt-theme="category"]) #rightBody .diamond { background-color:var(--theme-bar) !important; }
+body[data-gantt-theme]:not([data-gantt-theme="category"]) #rightBody .bandStripe,
+body[data-gantt-theme]:not([data-gantt-theme="category"]) #leftBody .gRow.band { background-color:var(--theme-section) !important; }
+body[data-gantt-theme]:not([data-gantt-theme="category"]) #legendBox .completedColor { background-color:var(--theme-bar) !important; }
+body[data-gantt-theme="project-blue"] { --theme-bar:#5b9bd5; --theme-bar-light:#d9eaf7; --theme-section:#217346; }
+body[data-gantt-theme="classic-red"] { --theme-bar:#e06666; --theme-bar-light:#fbe4e4; --theme-section:#a64b4b; }
+body[data-gantt-theme="modern-teal"] { --theme-bar:#22a6a1; --theme-bar-light:#d9f0ef; --theme-section:#167a76; }
+@media (max-width:600px) {
+  header { gap:8px; padding:7px 10px; }
+  header h1 { font-size:13px; }
+  .headerTag { display:none; }
+  .ribbonTabs { padding:0 4px; }
+  .ribbonTab { padding-right:10px; padding-left:10px; }
+  .ribbonPanel { padding-right:7px; padding-left:7px; }
+}
+.wrap { padding:16px 20px 60px; }
+.card { background:#fff; border:1px solid #d5dae1; border-radius:6px; padding:14px; margin-bottom:16px; }
+.card h2 { margin:0 0 10px; font-size:15px; color:#000; border-bottom:2px solid #16456b; padding-bottom:5px;
+           display:flex; justify-content:space-between; align-items:center; }
+.card h2 .sub { font-size:11px; font-weight:normal; color:#667; }
+
+label { font-weight:bold; font-size:12px; display:block; margin-bottom:3px; }
+input, select, button { font-family:inherit; font-size:13px; padding:5px 7px; border:1px solid #b9c0c9; border-radius:4px; }
+button { cursor:pointer; background:#16456b; color:#fff; border:none; padding:7px 13px; font-weight:bold; }
+button:hover { background:#1d5a8c; }
+button.ghost { background:#fff; color:#16456b; border:1px solid #16456b; }
+button.ghost:hover { background:#eaf1f7; }
+button.danger { background:#a32020; }
+button.green { background:#0a7a2f; }
+button:disabled { opacity:.45; cursor:not-allowed; }
+.row-flex { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+.row-flex > div { min-width:150px; }
+.btnBar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.chk { display:flex; align-items:center; gap:5px; font-size:12px; font-weight:bold; color:#16456b; }
+.chk input { width:auto; }
+
+#dropZone { border:2px dashed #16456b; border-radius:6px; padding:18px; text-align:center; background:#f7fafd; color:#16456b; cursor:pointer; }
+#dropZone.hover { background:#dcebf7; border-color:#0d2f4b; }
+#dropZone small { display:block; margin-top:5px; color:#5a6a7a; }
+
+.hint { font-size:11px; color:#667; margin-top:6px; }
+.okMsg { color:#0a7a2f; font-weight:bold; }
+.warnMsg { color:#a35c00; font-weight:bold; }
+.errMsg { color:#a32020; font-weight:bold; }
+
+/* ================= INPUT TABLE (virtualized) ================= */
+.tblScroll { overflow:auto; max-height:360px; border:1px solid #ccd2d9; }
+table.inputTable { border-collapse:separate; border-spacing:0; width:100%; }
+.inputTable th { background:#16456b; color:#fff; font-size:12px; padding:6px; border:1px solid #0d2f4b;
+                 text-align:center; position:sticky; top:0; z-index:3; }
+.inputTable td { border-bottom:1px solid #e2e6ea; border-right:1px solid #e2e6ea; padding:2px; }
+.inputTable input, .inputTable select { width:100%; border:1px solid transparent; padding:3px; background:transparent; }
+.inputTable input:focus, .inputTable select:focus { border-color:#16456b; background:#fff; outline:none; }
+.inputTable tr.sectionRow td { background:#fdf0e2; }
+.inputTable tr.sectionRow .cTask { font-weight:bold; text-transform:uppercase; }
+
+/* ================= GANTT EDITOR ================= */
+.ganttViewport { display:flex; border:1px solid #b9c0c9; background:#fff; position:relative;
+                 height:560px; overflow:hidden; border-radius:4px; }
+.leftPane { flex:0 0 auto; overflow:hidden; position:relative; border-right:2px solid #16456b; background:#fff; }
+.rightPane { flex:1 1 auto; overflow:auto; position:relative; }
+
+/* the two headers.
+   left  : pinned with position absolute, the body slides underneath it
+   right : sticky only in the vertical direction, so it scrolls sideways with
+           the timeline but stays on top while scrolling down                     */
+.paneHeader { background:#eef2f6; border-bottom:2px solid #16456b; z-index:6; }
+.leftPane  .paneHeader { position:absolute; top:0; left:0; }
+.rightPane .paneHeader { position:sticky;  top:0; left:auto; }
+
+.headCell { position:absolute; display:flex; align-items:center; justify-content:center;
+            font-size:11px; font-weight:bold; color:#16456b; border-right:1px solid #cfd6dd;
+            background:#eef2f6; text-align:center; overflow:hidden; }
+
+/* the left body is pushed down by the header height so both panes line up */
+.leftPane  .paneBody { position:absolute; left:0; will-change:transform; }
+.rightPane .paneBody { position:relative; }
+
+.gRow { position:absolute; left:0; display:flex; align-items:center;
+        border-bottom:1px solid #e6eaee; background:#fff; }
+.gRow.alt { background:#fafbfc; }
+.gRow.band { background:#c55a11; color:#fff; font-weight:bold; letter-spacing:.4px; }
+.gRow.band input { color:#fff; font-weight:bold; text-transform:uppercase; }
+.gRow.sel { box-shadow: inset 0 0 0 2px #0a7a2f; }
+
+.gCell { display:flex; align-items:center; padding:0 3px; height:100%; overflow:hidden;
+         border-right:1px solid #eef1f4; }
+.gCell input { width:100%; border:1px solid transparent; background:transparent; padding:2px 3px;
+               font-size:11px; font-family:inherit; border-radius:3px; }
+.gCell input:focus { border-color:#16456b; background:#fff; outline:none; }
+.gCell input.belumSah, .inputTable input.belumSah { background:#fffbe6; border-color:#e0a800; }
+.gCell.ro { justify-content:center; font-size:11px; color:#555; }
+
+/* ===== PEGANGAN SERET BARIS ===== */
+.grip {
+  cursor:grab; color:#9aa7b4; font-size:11px; letter-spacing:-2px;
+  user-select:none; padding:0 2px; line-height:1;
+}
+.grip:hover { color:#16456b; }
+.gRow.band .grip { color:#f6d5be; }
+.gRow.sedangDiseret { opacity:.45; }
+.sisipTanda {
+  position:absolute; left:0; height:0; z-index:12; pointer-events:none;
+  border-top:2px solid #0a7a2f;
+}
+.sisipTanda::before {
+  content:''; position:absolute; left:0; top:-4px;
+  border:5px solid transparent; border-left-color:#0a7a2f;
+}
+#seretBayangan {
+  position:fixed; z-index:999; pointer-events:none; display:none;
+  background:#16456b; color:#fff; font-size:11.5px; font-weight:700;
+  padding:5px 11px; border-radius:4px; box-shadow:0 3px 12px rgba(0,0,0,.32);
+  white-space:nowrap; max-width:340px; overflow:hidden; text-overflow:ellipsis;
+}
+.miniBtn { padding:1px 5px; font-size:11px; line-height:1.3; border-radius:3px; }
+
+/* timeline background grid */
+.gridLayer { position:absolute; top:0; left:0; pointer-events:none; z-index:0; }
+.gridCol { position:absolute; top:0; border-right:1px solid #eceff2; }
+.gridCol.weekend { background:#f4f5f7; }
+.gridCol.today { background:#fff6dd; }
+.todayLine { position:absolute; top:0; width:0; border-left:2px dashed #e08a00; z-index:4; pointer-events:none; }
+
+/* the dependency arrows live in their own svg, under the bars */
+#linkLayer { position:absolute; top:0; left:0; z-index:1; pointer-events:none; overflow:visible; }
+#linkLayer .linkPath { fill:none; stroke:#5a6a7a; stroke-width:1.3; }
+#linkLayer .linkPath.bad { stroke:#c00000; stroke-dasharray:4 3; }
+#linkLayer .linkHead { fill:#5a6a7a; }
+#linkLayer .linkHead.bad { fill:#c00000; }
+#linkLayer .linkHit { fill:none; stroke:transparent; stroke-width:9; pointer-events:stroke; cursor:pointer; }
+#linkLayer .linkHit:hover + .linkPath { stroke:#0a7a2f; stroke-width:2.2; }
+#linkLayer .linkTag { font:9px Calibri, Arial, sans-serif; fill:#44515e; }
+#linkLayer .linkTag.bad { fill:#c00000; font-weight:bold; }
+#linkLayer .rubber { fill:none; stroke:#0a7a2f; stroke-width:1.6; stroke-dasharray:5 3; }
+
+.barRow { position:absolute; left:0; }
+.bandStripe { position:absolute; left:0; background:#c55a11; opacity:.92; }
+
+.bar { position:absolute; border:1px solid #666; cursor:grab;
+       clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%);
+       display:flex; align-items:center; justify-content:center; overflow:hidden; z-index:2; }
+.bar:hover { filter:brightness(.96); }
+.bar.dragging { cursor:grabbing; z-index:9; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+.barFill { position:absolute; left:0; top:0; height:100%; pointer-events:none; }
+.barLabelIn { position:relative; z-index:2; font-size:10px; color:#000; padding:0 8px; white-space:nowrap; pointer-events:none; }
+.barLabelOut { position:absolute; display:flex; align-items:center; font-size:10px; color:#222;
+               white-space:nowrap; pointer-events:none; z-index:2; }
+.handle { position:absolute; top:0; width:7px; height:100%; z-index:3; cursor:ew-resize; }
+.handle.l { left:0; } .handle.r { right:0; }
+.bar:hover .handle { background:rgba(0,0,0,.18); }
+.diamond { position:absolute; background:#c00000; transform:rotate(45deg); cursor:grab; z-index:2; }
+
+.conn { position:absolute; width:11px; height:11px; border-radius:50%;
+        background:#fff; border:2px solid #0a7a2f; z-index:5; cursor:crosshair;
+        opacity:0; transition:opacity .12s; }
+.barRow:hover .conn { opacity:1; }
+.conn:hover { background:#0a7a2f; }
+body.linking .conn { opacity:1; }
+
+#dragTip { position:fixed; z-index:999; background:#16456b; color:#fff; font-size:11px;
+           padding:4px 8px; border-radius:4px; pointer-events:none; display:none; white-space:nowrap; }
+
+#linkPopup { position:fixed; z-index:998; background:#fff; border:1px solid #16456b; border-radius:5px;
+             box-shadow:0 4px 14px rgba(0,0,0,.22); padding:10px; display:none; min-width:210px; }
+#linkPopup h4 { margin:0 0 8px; font-size:12px; color:#16456b; border-bottom:1px solid #dfe3e8; padding-bottom:5px; }
+#linkPopup .fieldRow { display:flex; align-items:center; gap:6px; margin-bottom:7px; font-size:12px; }
+#linkPopup .fieldRow label { margin:0; width:52px; }
+
+.legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:12px; align-items:center; }
+.legend span.box { display:inline-block; width:14px; height:14px; border:1px solid #999; vertical-align:-2px; margin-right:4px; }
+.legend svg { vertical-align:-3px; margin-right:3px; }
+@media print {
+  @page { size: A3 landscape; margin: 8mm; }
+  body { background:#fff; }
+  header, .noPrint { display:none !important; }
+  .wrap { padding:0; }
+  .card { border:none; padding:0; margin:0; }
+  .ganttViewport { height:auto !important; overflow:visible; border:none; }
+  .leftPane, .rightPane { overflow:visible !important; }
+  .conn { display:none !important; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="headerBrand">
+    <div class="headerMark" aria-hidden="true">GC</div>
+    <div>
+      <h1>Gantt Chart Schedule Generator</h1>
+      <p>Project scheduling workspace</p>
+    </div>
+  </div>
+  <div class="headerTag">JAYA OBAYASHI · PROJECT SCHEDULE</div>
+</header>
+
+<div class="projectRibbon noPrint" id="projectRibbon">
+  <nav class="ribbonTabs" role="tablist" aria-label="Project commands">
+    <button type="button" class="ribbonTab" role="tab" aria-selected="false" onclick="activateRibbonTab('file',this)">File</button>
+    <button type="button" class="ribbonTab active" role="tab" aria-selected="true" onclick="activateRibbonTab('task',this)">Task</button>
+    <button type="button" class="ribbonTab" role="tab" aria-selected="false" onclick="activateRibbonTab('project',this)">Project</button>
+    <button type="button" class="ribbonTab" role="tab" aria-selected="false" onclick="activateRibbonTab('view',this)">View</button>
+    <button type="button" class="ribbonTab" role="tab" aria-selected="false" onclick="activateRibbonTab('report',this)">Report</button>
+    <button type="button" class="ribbonTab" role="tab" aria-selected="false" onclick="activateRibbonTab('format',this)">Gantt Chart Format</button>
+  </nav>
+
+  <section class="ribbonPanel" id="ribbon-task" role="tabpanel">
+    <div class="ribbonGroup">
+      <div class="ribbonStack">
+        <button type="button" onclick="addRowAfterSelection('task')">＋ Activity</button>
+        <button type="button" class="ghost" onclick="addRowAfterSelection('section')">＋ Section</button>
+      </div>
+      <div class="ribbonStack">
+        <button type="button" class="ghost" onclick="addManyRows(5)">＋ 5 Activities</button>
+      </div>
+      <div class="ribbonGroupLabel">Insert</div>
+    </div>
+    <div class="ribbonGroup">
+      <div class="ribbonStack">
+        <button type="button" class="ghost" id="undoBtn" onclick="undo()" disabled>↶ Undo</button>
+        <button type="button" class="ghost" id="redoBtn" onclick="redo()" disabled>↷ Redo</button>
+      </div>
+      <div class="ribbonGroupLabel">History</div>
+    </div>
+    <div class="ribbonGroup">
+      <div class="ribbonStack">
+        <button type="button" class="ghost" onclick="clearAllLinks()">Clear Links</button>
+        <button type="button" class="danger" onclick="clearAll()">Clear All</button>
+      </div>
+      <div class="ribbonGroupLabel">Edit</div>
+    </div>
+    <div class="ribbonGroup" style="min-width:220px">
+      <span id="editInfo" class="okMsg" aria-live="polite"></span>
+      <div class="ribbonGroupLabel">Status</div>
+    </div>
+  </section>
+
+  <section class="ribbonPanel" id="ribbon-file" role="tabpanel" hidden>
+    <div class="ribbonGroup">
+      <div class="ribbonStack">
+        <button type="button" class="green" onclick="saveProjectJson()">💾 Save Project</button>
+        <button type="button" class="ghost" onclick="document.getElementById('jsonInput').click()">📂 Open Project</button>
+      </div>
+      <div class="ribbonGroupLabel">Project File</div>
+    </div>
+    <div class="ribbonGroup">
+      <div class="ribbonStack">
+        <button type="button" class="ghost" onclick="restoreAutoSave()">Restore Last Session</button>
+        <button type="button" class="ghost" onclick="clearAutoSave()">Clear Auto-save</button>
+        <input type="file" id="jsonInput" accept=".json" style="display:none">
+        <span id="saveInfo" class="okMsg" aria-live="polite"></span>
+      </div>
+      <div class="ribbonGroupLabel">Recovery</div>
+    </div>
+    <div class="ribbonGroup">
+      <div id="dropZone" class="ribbonDrop">
+        <b>Open or drop a schedule file</b>
+        <small>.json · .xlsx · .xls · .csv</small>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.json" style="display:none">
+      <div class="ribbonStack">
+        <button type="button" class="ghost" onclick="downloadTemplate()">Excel Template</button>
+        <button type="button" class="ghost" onclick="loadSample()">Load Sample</button>
+        <span id="importInfo" class="okMsg" aria-live="polite"></span>
+      </div>
+      <div class="ribbonGroupLabel">Import Data</div>
+    </div>
+  </section>
+
+  <section class="ribbonPanel" id="ribbon-project" role="tabpanel" hidden>
+    <div class="ribbonGroup">
+      <label class="ribbonControl" style="min-width:220px">Project Name
+        <input id="projName" value="JKT09 Data Center Project">
+      </label>
+      <label class="ribbonControl" style="min-width:180px">Prepared By
+        <input id="projBy" value="QA/QC Department">
+      </label>
+      <label class="ribbonControl" style="min-width:150px">Data Date
+        <input type="date" id="projDate">
+      </label>
+      <div class="ribbonGroupLabel">Project Information</div>
+    </div>
+  </section>
+
+  <section class="ribbonPanel" id="ribbon-view" role="tabpanel" hidden>
+    <div class="ribbonGroup">
+      <label class="ribbonControl">Timeline Scale
+        <select id="scale">
+          <option value="day">Daily</option>
+          <option value="week" selected>Weekly</option>
+          <option value="month">Monthly</option>
+        </select>
+      </label>
+      <label class="ribbonControl">Column Width
+        <select id="zoom">
+          <option value="16">Narrow (16 px)</option>
+          <option value="24" selected>Normal (24 px)</option>
+          <option value="34">Wide (34 px)</option>
+          <option value="48">Extra wide (48 px)</option>
+        </select>
+      </label>
+      <label class="ribbonControl">Chart Height
+        <select id="viewHeight">
+          <option value="420">Short (420 px)</option>
+          <option value="560" selected>Normal (560 px)</option>
+          <option value="760">Tall (760 px)</option>
+          <option value="1000">Very tall (1000 px)</option>
+        </select>
+      </label>
+      <div class="ribbonGroupLabel">Timeline</div>
+    </div>
+    <div class="ribbonGroup">
+      <div class="ribbonStack">
+        <label class="ribbonCheck" title="Nomor melekat pada pekerjaan, tidak ikut berubah saat baris digeser"><input type="checkbox" id="lockNo"> Lock row numbers</label>
+        <label class="ribbonCheck"><input type="checkbox" id="showLinks" checked> Dependency lines</label>
+        <label class="ribbonCheck"><input type="checkbox" id="showLinkTags" checked> FS / SS / FF labels</label>
+      </div>
+      <div class="ribbonGroupLabel">Display</div>
+    </div>
+    <div class="ribbonGroup">
+      <div class="ribbonStack">
+        <button type="button" class="ghost" onclick="scrollToTop()">↑ Top</button>
+        <button type="button" class="ghost" onclick="scrollToToday()">Go to Today</button>
+      </div>
+      <div class="ribbonGroupLabel">Navigation</div>
+    </div>
+  </section>
+
+  <section class="ribbonPanel" id="ribbon-report" role="tabpanel" hidden>
+    <div class="ribbonGroup">
+      <div class="ribbonStack">
+        <button type="button" onclick="window.print()">Export to PDF / Print</button>
+        <button type="button" class="green" onclick="exportExcel()">Export Excel (Gantt Shapes)</button>
+      </div>
+      <span id="excelInfo" class="okMsg" aria-live="polite"></span>
+      <div class="ribbonGroupLabel">Export</div>
+    </div>
+    <div class="ribbonGroup" style="max-width:360px;color:#68737b;font-size:11px">
+      PDF: choose Landscape, A3 paper, and enable Background graphics.
+      <div class="ribbonGroupLabel">Print Settings</div>
+    </div>
+  </section>
+
+  <section class="ribbonPanel" id="ribbon-format" role="tabpanel" hidden>
+    <div class="ribbonGroup">
+      <div class="themeChoices" role="group" aria-label="Gantt chart theme">
+        <button type="button" class="themeChoice active" data-theme="category" aria-pressed="true" onclick="setGanttTheme('category')">
+          <span class="themeSwatch"><i></i><i></i></span><span>Category Colors</span>
+        </button>
+        <button type="button" class="themeChoice" data-theme="project-blue" aria-pressed="false" onclick="setGanttTheme('project-blue')">
+          <span class="themeSwatch"><i></i><i></i></span><span>Project Blue</span>
+        </button>
+        <button type="button" class="themeChoice" data-theme="classic-red" aria-pressed="false" onclick="setGanttTheme('classic-red')">
+          <span class="themeSwatch"><i></i><i></i></span><span>Classic Red</span>
+        </button>
+        <button type="button" class="themeChoice" data-theme="modern-teal" aria-pressed="false" onclick="setGanttTheme('modern-teal')">
+          <span class="themeSwatch"><i></i><i></i></span><span>Modern Teal</span>
+        </button>
+      </div>
+      <div class="ribbonGroupLabel">Chart Styles</div>
+    </div>
+  </section>
+</div>
+
+<div class="wrap">
+
+  <!-- Gantt interactive editor intentionally stays independent of the ribbon. -->
+  <div class="card" id="editorCard">
+    <h2>
+      <span>Gantt Chart &mdash; Interactive Editor</span>
+      <span class="sub noPrint">drag a bar to move &nbsp;&bull;&nbsp; drag its edge to resize &nbsp;&bull;&nbsp; drag a green dot onto another bar to link them</span>
+    </h2>
+
+    <div class="ganttViewport" id="viewport">
+      <div class="leftPane" id="leftPane">
+        <div class="paneHeader" id="leftHeader"></div>
+        <div class="paneBody" id="leftBody"></div>
+      </div>
+      <div class="rightPane" id="rightPane">
+        <div class="paneHeader" id="rightHeader"></div>
+        <div class="paneBody" id="rightBody"></div>
+      </div>
+    </div>
+
+    <div class="legend" id="legendBox"></div>
+
+  </div>
+
+  <!-- Table view continues to share the existing chart data and editor logic. -->
+  <div class="card noPrint">
+    <h2>
+      <span>Table View <span style="font-weight:normal;font-size:12px">(same data, edits sync both ways)</span></span>
+      <span><button class="ghost miniBtn" onclick="toggleTable()" id="tableToggleBtn">Hide table</button></span>
+    </h2>
+    <div id="tableHolder">
+      <div class="tblScroll" id="tblScroll">
+        <table class="inputTable" id="taskTable">
+          <thead>
+            <tr>
+              <th style="width:42px">No</th>
+              <th style="width:100px">Type</th>
+              <th style="min-width:210px">Activity / Section Title</th>
+              <th style="width:115px">Category</th>
+              <th style="width:122px">Start</th>
+              <th style="width:122px">Finish</th>
+              <th style="width:52px">Days</th>
+              <th style="width:64px">Prog %</th>
+              <th style="width:118px">Predecessor</th>
+              <th style="width:118px">Responsible</th>
+              <th style="width:58px">Move</th>
+              <th style="width:36px">Del</th>
+            </tr>
+          </thead>
+          <tbody id="taskBody"></tbody>
+        </table>
+      </div>
+      <p class="hint">
+        Predecessor format: <b>3FS</b> (finish to start), <b>3SS</b> (start to start), <b>3FF</b> (finish to finish),
+        <b>3SF</b> (start to finish). Add a lag with <b>+</b> or <b>-</b>, for example <b>3FS+7</b>.
+        Separate several with a comma. Only the visible row numbers are used.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<div id="dragTip"></div>
+
+<div id="linkPopup">
+  <h4 id="linkPopupTitle">Dependency</h4>
+  <div class="fieldRow">
+    <label>Type</label>
+    <select id="linkPopupType" style="flex:1">
+      <option value="FS">FS &mdash; Finish to Start</option>
+      <option value="SS">SS &mdash; Start to Start</option>
+      <option value="FF">FF &mdash; Finish to Finish</option>
+      <option value="SF">SF &mdash; Start to Finish</option>
+    </select>
+  </div>
+  <div class="fieldRow">
+    <label>Lag</label>
+    <input type="number" id="linkPopupLag" value="0" style="flex:1"> <span style="font-size:11px;color:#667">days</span>
+  </div>
+  <div id="linkPopupWarn" class="errMsg" style="font-size:11px; margin-bottom:7px; display:none"></div>
+  <div class="btnBar">
+    <button class="green miniBtn" style="padding:5px 10px" onclick="applyLinkPopup()">Apply</button>
+    <button class="danger miniBtn" style="padding:5px 10px" onclick="deleteLinkFromPopup()">Delete</button>
+    <button class="ghost miniBtn" style="padding:5px 10px" onclick="hideLinkPopup()">Close</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   PART 1 - SMALL HELPERS
+   ========================================================================= */
+
+var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var FILE_VERSION = 6;
+
+function toDate(text) {
+  if (!text) return null;
+  var p = String(text).split("-");
+  if (p.length !== 3) return null;
+  var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), 12, 0, 0);
+  return isNaN(d) ? null : d;
+}
+function toText(d) {
+  if (!d) return "";
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function toDisplay(d) {
+  if (!d) return "";
+  return String(d.getDate()).padStart(2,"0") + "-" + MONTHS[d.getMonth()] + "-" + String(d.getFullYear()).slice(2);
+}
+function countDays(a, b) { if (!a || !b) return ""; return Math.round((b - a) / 86400000) + 1; }
+function diffDays(a, b) { return Math.round((b - a) / 86400000); }
+function addDays(d, n) { var c = new Date(d.getTime()); c.setDate(c.getDate() + n); return c; }
+function addMonths(d, n) {
+  var c = new Date(d.getTime());
+  var day = c.getDate();
+  c.setDate(1);
+  c.setMonth(c.getMonth() + n);
+  var lastDay = new Date(c.getFullYear(), c.getMonth() + 1, 0).getDate();
+  c.setDate(Math.min(day, lastDay));
+  return c;
+}
+function getMonday(d) { var c = new Date(d.getTime()); var w = c.getDay(); return addDays(c, w === 0 ? -6 : 1 - w); }
+
+function shiftByUnits(d, k, scale) {
+  if (k === 0) return new Date(d.getTime());
+  if (scale === "day")   return addDays(d, k);
+  if (scale === "week")  return addDays(d, k * 7);
+  return addMonths(d, k);
+}
+
+function escapeHtml(t) {
+  return String(t).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; });
+}
+function escapeXml(t) {
+  return String(t).replace(/[&<>"']/g, function (c) {
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c];
+  });
+}
+
+var PALETTE = ["4472C4","ED7D31","70AD47","FFC000","7030A0","C00000","00B0F0","2E75B6","997300","548235"];
+var categoryColorMap = {};
+
+function getColor(category) {
+  var key = (category || "General").trim().toUpperCase();
+  if (!categoryColorMap[key]) {
+    var i = Object.keys(categoryColorMap).length % PALETTE.length;
+    categoryColorMap[key] = PALETTE[i];
+  }
+  return categoryColorMap[key];
+}
+function tint(hex, amount) {
+  var r = parseInt(hex.substring(0,2),16), g = parseInt(hex.substring(2,4),16), b = parseInt(hex.substring(4,6),16);
+  r = Math.round(r + (255-r)*amount); g = Math.round(g + (255-g)*amount); b = Math.round(b + (255-b)*amount);
+  return [r,g,b].map(function(n){ return n.toString(16).padStart(2,"0").toUpperCase(); }).join("");
+}
+
+function activateRibbonTab(name, selectedTab) {
+  var tabs = document.querySelectorAll("#projectRibbon .ribbonTab");
+  var panels = document.querySelectorAll("#projectRibbon .ribbonPanel");
+  for (var i = 0; i < tabs.length; i++) {
+    var selected = tabs[i] === selectedTab;
+    tabs[i].classList.toggle("active", selected);
+    tabs[i].setAttribute("aria-selected", selected ? "true" : "false");
+  }
+  for (var p = 0; p < panels.length; p++) panels[p].hidden = panels[p].id !== "ribbon-" + name;
+}
+
+function setGanttTheme(theme, persist) {
+  var validThemes = ["category", "project-blue", "classic-red", "modern-teal"];
+  if (validThemes.indexOf(theme) === -1) theme = "category";
+  document.body.setAttribute("data-gantt-theme", theme);
+  var choices = document.querySelectorAll(".themeChoice");
+  for (var i = 0; i < choices.length; i++) {
+    var selected = choices[i].getAttribute("data-theme") === theme;
+    choices[i].classList.toggle("active", selected);
+    choices[i].setAttribute("aria-pressed", selected ? "true" : "false");
+  }
+  if (persist !== false) {
+    try { localStorage.setItem("jkt09.gantt.visual-theme", theme); } catch (err) { /* preference storage is optional */ }
+  }
+}
+
+
+/* =========================================================================
+   PART 2 - THE DATA MODEL
+   ========================================================================= */
+
+var ROWS = [];       // { id, type, name, category, start, finish, progress, responsible }
+var LINKS = [];      // { id, fromId, toId, type:"FS"|"SS"|"FF"|"SF", lag:Number }
+var VIEW = [];
+var UNITS = [];
+var POS = {};        // row id -> index inside VIEW
+var LABEL = {};      // row id -> the number shown in the No column
+var BY_LABEL = {};
+var idSeed = 1, linkSeed = 1;
+var selectedId = null;
+
+var LINK_TYPES = ["FS","SS","FF","SF"];
+
+function kunciNomor() {
+  var el = document.getElementById("lockNo");
+  return !!(el && el.checked);
+}
+
+var noSeed = 1;          // nomor tetap, diberikan sekali saat baris dibuat
+function newRow(type) {
+  return { id: idSeed++, no: (type === "section" ? 0 : noSeed++),
+           type: type || "task", name: "", category: "",
+           start: "", finish: "", progress: 0, responsible: "" };
+}
+function rowIndexById(id) {
+  for (var i = 0; i < ROWS.length; i++) if (ROWS[i].id === id) return i;
+  return -1;
+}
+function rowById(id) { var i = rowIndexById(id); return i === -1 ? null : ROWS[i]; }
+
+function buildView() {
+  VIEW = []; POS = {}; LABEL = {}; BY_LABEL = {};
+  var letterIndex = 0, taskNumber = 0;
+
+  for (var i = 0; i < ROWS.length; i++) {
+    var r = ROWS[i];
+    if (r.type === "section") {
+      LABEL[r.id] = String.fromCharCode(65 + letterIndex) + ".";
+      POS[r.id] = VIEW.length;
+      VIEW.push({ row:r, isSection:true, label: LABEL[r.id], index:i });
+      letterIndex++;
+      continue;
+    }
+    var s = toDate(r.start), f = toDate(r.finish);
+    taskNumber++;
+    // Dua cara penomoran:
+    //   - urut posisi  : nomor mengikuti letak baris, berubah bila digeser
+    //   - nomor tetap  : nomor melekat pada pekerjaan, tidak berubah walau digeser
+    var nomor = kunciNomor() ? String(r.no || taskNumber) : String(taskNumber);
+    LABEL[r.id] = nomor;
+    BY_LABEL[nomor] = r.id;
+    POS[r.id] = VIEW.length;
+    VIEW.push({
+      row: r, isSection:false, index:i,
+      label: String(taskNumber),
+      start: s, finish: f,
+      days: (s && f) ? countDays(s, f) : "",
+      valid: !!(s && f && f >= s)
+    });
+  }
+}
+
+function buildTimeline() {
+  UNITS = [];
+  var scale = document.getElementById("scale").value;
+
+  var minStart = null, maxEnd = null;
+  for (var i = 0; i < VIEW.length; i++) {
+    var v = VIEW[i];
+    if (!v.valid) continue;
+    if (!minStart || v.start < minStart) minStart = v.start;
+    if (!maxEnd   || v.finish > maxEnd)  maxEnd  = v.finish;
+  }
+  if (!minStart) {
+    var now = new Date(); now.setHours(12,0,0,0);
+    minStart = new Date(now.getFullYear(), now.getMonth(), 1, 12,0,0);
+    maxEnd = addDays(minStart, 60);
+  }
+
+  /* Pengaman: satu tanggal ngawur sekalipun tidak boleh membuat rentang
+     waktu melar sampai ribuan kolom -- itu yang membuat aplikasi tersendat. */
+  var BATAS_KOLOM = 2000;
+  var perkiraan = Math.round((maxEnd - minStart) / 86400000) + 1;
+  if (scale === "week")  perkiraan = Math.ceil(perkiraan / 7);
+  if (scale === "month") perkiraan = Math.ceil(perkiraan / 30);
+  if (perkiraan > BATAS_KOLOM) {
+    var pesan = document.getElementById("editInfo");
+    if (pesan) {
+      pesan.className = "errMsg";
+      pesan.textContent = "Rentang tanggal terlalu jauh (" + perkiraan +
+        " kolom). Periksa kembali tanggal mulai dan selesai \u2014 kemungkinan ada tahun yang salah ketik.";
+    }
+    maxEnd = addDays(minStart, BATAS_KOLOM * (scale === "day" ? 1 : scale === "week" ? 7 : 30));
+  }
+
+  if (scale === "day") {
+    var c = new Date(minStart.getTime());
+    while (c <= maxEnd) {
+      UNITS.push({ from:new Date(c.getTime()), to:new Date(c.getTime()), label:String(c.getDate()),
+                   group: MONTHS[c.getMonth()] + " " + c.getFullYear(),
+                   weekend:(c.getDay()===0 || c.getDay()===6) });
+      c = addDays(c, 1);
+    }
+  } else if (scale === "week") {
+    var w = getMonday(minStart), n = 1;
+    while (w <= maxEnd) {
+      UNITS.push({ from:new Date(w.getTime()), to:addDays(w,6), label:"W"+n,
+                   group: MONTHS[w.getMonth()] + " " + w.getFullYear(), weekend:false });
+      w = addDays(w, 7); n++;
+    }
+  } else {
+    var m = new Date(minStart.getFullYear(), minStart.getMonth(), 1, 12,0,0);
+    while (m <= maxEnd) {
+      UNITS.push({ from:new Date(m.getTime()), to:new Date(m.getFullYear(), m.getMonth()+1, 0, 12,0,0),
+                   label: MONTHS[m.getMonth()], group:String(m.getFullYear()), weekend:false });
+      m = new Date(m.getFullYear(), m.getMonth()+1, 1, 12,0,0);
+    }
+  }
+
+  for (var k = 0; k < VIEW.length; k++) {
+    var vv = VIEW[k];
+    if (vv.isSection || !vv.valid) continue;
+    var first = -1, last = -1;
+    for (var u = 0; u < UNITS.length; u++) {
+      if (UNITS[u].to >= vv.start && UNITS[u].from <= vv.finish) {
+        if (first === -1) first = u;
+        last = u;
+      }
+    }
+    vv.first = first; vv.last = last; vv.span = (first === -1 ? 0 : last - first + 1);
+    vv.milestone = (vv.days === 1);
+  }
+}
+
+function todayColumnIndex() {
+  var today = new Date(); today.setHours(12,0,0,0);
+  for (var i = 0; i < UNITS.length; i++) if (today >= UNITS[i].from && today <= UNITS[i].to) return i;
+  return -1;
+}
+
+
+/* =========================================================================
+   PART 3 - THE DEPENDENCY LINKS
+   ========================================================================= */
+
+function newLink(fromId, toId, type, lag) {
+  return { id: linkSeed++, fromId: fromId, toId: toId,
+           type: (LINK_TYPES.indexOf(type) === -1 ? "FS" : type), lag: Number(lag) || 0 };
+}
+
+function findLink(fromId, toId) {
+  for (var i = 0; i < LINKS.length; i++) {
+    if (LINKS[i].fromId === fromId && LINKS[i].toId === toId) return LINKS[i];
+  }
+  return null;
+}
+function linkById(id) {
+  for (var i = 0; i < LINKS.length; i++) if (LINKS[i].id === id) return LINKS[i];
+  return null;
+}
+
+function reaches(startId, targetId) {
+  var seen = {}, stack = [startId];
+  while (stack.length) {
+    var cur = stack.pop();
+    if (cur === targetId) return true;
+    if (seen[cur]) continue;
+    seen[cur] = true;
+    for (var i = 0; i < LINKS.length; i++) {
+      if (LINKS[i].fromId === cur) stack.push(LINKS[i].toId);
+    }
+  }
+  return false;
+}
+
+function checkLink(fromId, toId) {
+  if (fromId === toId) return "A row cannot depend on itself.";
+  var a = rowById(fromId), b = rowById(toId);
+  if (!a || !b) return "One of the rows no longer exists.";
+  if (a.type === "section" || b.type === "section") return "A section band cannot take a dependency.";
+  if (findLink(fromId, toId)) return "These two are already linked.";
+  if (reaches(toId, fromId)) return "That would make a circular chain.";
+  return "";
+}
+
+function addLink(fromId, toId, type, lag, quiet) {
+  var problem = checkLink(fromId, toId);
+  if (problem) { if (!quiet) alert(problem); return null; }
+  pushUndo();
+  var link = newLink(fromId, toId, type, lag);
+  LINKS.push(link);
+  markDirty();
+  return link;
+}
+
+function removeLink(id) {
+  for (var i = 0; i < LINKS.length; i++) {
+    if (LINKS[i].id === id) { pushUndo(); LINKS.splice(i, 1); markDirty(); return true; }
+  }
+  return false;
+}
+
+function removeLinksOfRow(rowId) {
+  for (var i = LINKS.length - 1; i >= 0; i--) {
+    if (LINKS[i].fromId === rowId || LINKS[i].toId === rowId) LINKS.splice(i, 1);
+  }
+}
+
+function clearAllLinks() {
+  if (LINKS.length === 0) { alert("There is no dependency yet."); return; }
+  if (!confirm("Remove all " + LINKS.length + " dependencies?")) return;
+  pushUndo();
+  LINKS = [];
+  markDirty(); renderAll();
+}
+
+function linkEnds(type) {
+  if (type === "SS") return { from:"start",  to:"start"  };
+  if (type === "FF") return { from:"finish", to:"finish" };
+  if (type === "SF") return { from:"start",  to:"finish" };
+  return { from:"finish", to:"start" };
+}
+
+function linkIsViolated(link) {
+  var a = VIEW[POS[link.fromId]], b = VIEW[POS[link.toId]];
+  if (!a || !b || !a.valid || !b.valid) return false;
+  var lag = link.lag || 0;
+  if (link.type === "FS") return diffDays(a.finish, b.start)  < 1 + lag;
+  if (link.type === "SS") return diffDays(a.start,  b.start)  < lag;
+  if (link.type === "FF") return diffDays(a.finish, b.finish) < lag;
+  return diffDays(a.start, b.finish) < 1 + lag;
+}
+
+function predecessorText(rowId) {
+  var out = [];
+  for (var i = 0; i < LINKS.length; i++) {
+    var L = LINKS[i];
+    if (L.toId !== rowId) continue;
+    var label = LABEL[L.fromId];
+    if (!label) continue;
+    var lag = "";
+    if (L.lag > 0) lag = "+" + L.lag;
+    else if (L.lag < 0) lag = String(L.lag);
+    out.push(label + L.type + lag);
+  }
+  return out.join(", ");
+}
+
+function setPredecessorText(rowId, text) {
+  var wanted = [], problems = [];
+  var parts = String(text).split(/[,;]/);
+
+  for (var i = 0; i < parts.length; i++) {
+    var token = parts[i].trim().toUpperCase().replace(/\s+/g, "");
+    if (token === "") continue;
+
+    var m = token.match(/^(\d+)(FS|SS|FF|SF)?([+-]\d+)?$/);
+    if (!m) { problems.push(parts[i].trim()); continue; }
+
+    var predId = BY_LABEL[m[1]];
+    if (predId === undefined) { problems.push(parts[i].trim()); continue; }
+
+    wanted.push({ fromId: predId, type: m[2] || "FS", lag: m[3] ? Number(m[3]) : 0 });
+  }
+
+  pushUndo();
+
+  for (var k = LINKS.length - 1; k >= 0; k--) if (LINKS[k].toId === rowId) LINKS.splice(k, 1);
+
+  var rejected = [];
+  for (var w = 0; w < wanted.length; w++) {
+    var problem = checkLink(wanted[w].fromId, rowId);
+    if (problem) { rejected.push(LABEL[wanted[w].fromId] + " (" + problem + ")"); continue; }
+    LINKS.push(newLink(wanted[w].fromId, rowId, wanted[w].type, wanted[w].lag));
+  }
+
+  var note = "";
+  if (problems.length) note += "Not understood: " + problems.join(", ") + ". ";
+  if (rejected.length) note += "Refused: " + rejected.join(" ");
+  document.getElementById("editInfo").textContent = note;
+  document.getElementById("editInfo").className = note ? "errMsg" : "okMsg";
+
+  markDirty();
+}
+
+
+/* =========================================================================
+   PART 4 - UNDO / REDO
+   ========================================================================= */
+
+var undoStack = [], redoStack = [], UNDO_LIMIT = 60;
+
+function snapshot() { return JSON.stringify({ rows: ROWS, links: LINKS, colors: categoryColorMap }); }
+
+function pushUndo() {
+  undoStack.push(snapshot());
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  redoStack = [];
+  refreshUndoButtons();
+}
+function applySnapshot(text) {
+  var data = JSON.parse(text);
+  ROWS = data.rows;
+  LINKS = data.links || [];
+  categoryColorMap = data.colors;
+}
+function undo() {
+  if (undoStack.length === 0) return;
+  redoStack.push(snapshot());
+  applySnapshot(undoStack.pop());
+  refreshUndoButtons(); renderAll(); markDirty();
+}
+function redo() {
+  if (redoStack.length === 0) return;
+  undoStack.push(snapshot());
+  applySnapshot(redoStack.pop());
+  refreshUndoButtons(); renderAll(); markDirty();
+}
+function refreshUndoButtons() {
+  document.getElementById("undoBtn").disabled = (undoStack.length === 0);
+  document.getElementById("redoBtn").disabled = (redoStack.length === 0);
+}
+
+document.addEventListener("keydown", function (e) {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  var tag = (e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "select") return;
+  if (e.key === "z" || e.key === "Z") { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+  if (e.key === "y" || e.key === "Y") { e.preventDefault(); redo(); }
+});
+
+
+/* =========================================================================
+   PART 5 - EDITING
+   ========================================================================= */
+
+var HEAVY_FIELDS = { start:1, finish:1, days:1, type:1, pred:1 };
+
+function updateField(id, field, value, sourceEl) {
+  var r = rowById(id);
+  if (!r) return;
+
+  if (field === "pred") { setPredecessorText(id, value); renderAll(sourceEl); return; }
+
+  pushUndo();
+
+  if (field === "days") {
+    var s = toDate(r.start);
+    var n = Math.max(1, Math.round(Number(value) || 1));
+    if (s) r.finish = toText(addDays(s, n - 1));
+  } else if (field === "progress") {
+    r.progress = Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
+  } else {
+    r[field] = value;
+  }
+
+  if (field === "type" && value === "section") {
+    r.start = ""; r.finish = ""; r.category = ""; r.progress = 0; r.responsible = "";
+    removeLinksOfRow(id);
+  }
+
+  if (field === "start" || field === "finish") {
+    var sd = toDate(r.start), fd = toDate(r.finish);
+    if (sd && fd && fd < sd) {
+      if (field === "start") r.finish = r.start; else r.start = r.finish;
+    }
+  }
+
+  markDirty();
+
+  if (HEAVY_FIELDS[field]) {
+    renderAll(sourceEl);
+  } else {
+    mirrorField(id, field, r[field], sourceEl);
+    if (field === "name" || field === "category" || field === "progress") redrawSingleBar(id);
+    if (field === "category") renderLegend();
+  }
+}
+
+function mirrorField(id, field, value, sourceEl) {
+  var list = document.querySelectorAll('[data-id="' + id + '"][data-field="' + field + '"]');
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] === sourceEl) continue;
+    if (list[i].value !== String(value)) list[i].value = value;
+  }
+  var r = rowById(id);
+  var days = (toDate(r.start) && toDate(r.finish)) ? countDays(toDate(r.start), toDate(r.finish)) : "";
+  var dayCells = document.querySelectorAll('[data-id="' + id + '"][data-field="days"]');
+  for (var k = 0; k < dayCells.length; k++) {
+    if (dayCells[k] === sourceEl) continue;
+    if (dayCells[k].tagName === "INPUT") dayCells[k].value = days; else dayCells[k].textContent = days;
+  }
+}
+
+function insertRowAt(index, type) {
+  pushUndo();
+  var r = newRow(type);
+  ROWS.splice(index, 0, r);
+  selectedId = r.id;
+  markDirty(); renderAll();
+  return r;
+}
+function addRowAfterSelection(type) {
+  var at = (selectedId !== null) ? rowIndexById(selectedId) + 1 : ROWS.length;
+  if (at <= 0) at = ROWS.length;
+  var r = insertRowAt(at, type);
+  focusRow(r.id);
+}
+function addManyRows(n) {
+  pushUndo();
+  var at = (selectedId !== null) ? rowIndexById(selectedId) + 1 : ROWS.length;
+  if (at <= 0) at = ROWS.length;
+  for (var i = 0; i < n; i++) ROWS.splice(at + i, 0, newRow("task"));
+  markDirty(); renderAll();
+}
+function deleteRow(id) {
+  var i = rowIndexById(id);
+  if (i === -1) return;
+  pushUndo();
+  ROWS.splice(i, 1);
+  removeLinksOfRow(id);
+  if (selectedId === id) selectedId = null;
+  markDirty(); renderAll();
+}
+function moveRow(id, direction) {
+  var i = rowIndexById(id);
+  var j = i + direction;
+  if (i === -1 || j < 0 || j >= ROWS.length) return;
+  pushUndo();
+  var tmp = ROWS[i]; ROWS[i] = ROWS[j]; ROWS[j] = tmp;
+  markDirty(); renderAll();
+}
+function clearAll() {
+  if (!confirm("Clear all rows and dependencies?")) return;
+  pushUndo();
+  ROWS = []; LINKS = []; categoryColorMap = {}; selectedId = null;
+  ROWS.push(newRow("section"));
+  for (var i = 0; i < 3; i++) ROWS.push(newRow("task"));
+  markDirty(); renderAll();
+}
+
+
+/* =========================================================================
+   PART 6 - CHART LAYOUT
+   ---------------------------------------------------------------------
+   Both panes place row i at the same place:   HEADER_H + i * ROW_H
+   On the right that offset comes for free, because the header is a sticky
+   block sitting in the normal flow above the body. On the left the body is
+   absolutely positioned, so it is pushed down by HEADER_H by hand.
+   Getting these two to agree is what keeps row 1 visible instead of hiding
+   underneath the header.
+   ========================================================================= */
+
+var ROW_H = 26;
+var HEADER_H = 42;
+var UNIT_PX = 24;
+var BUFFER_ROWS = 8;
+var STUB = 9;
+var ARROW = 5;
+
+var LEFT_COLS = [
+  { key:"grip",        w: 20, title:"" },
+  { key:"no",          w: 38, title:"No" },
+  { key:"name",        w:214, title:"Activity / Section" },
+  { key:"category",    w: 98, title:"Category" },
+  { key:"start",       w:110, title:"Start" },
+  { key:"finish",      w:110, title:"Finish" },
+  { key:"days",        w: 44, title:"Days" },
+  { key:"progress",    w: 48, title:"%" },
+  { key:"pred",        w: 96, title:"Pred." },
+  { key:"responsible", w:112, title:"Responsible" },
+  { key:"act",         w: 56, title:"" }
+];
+function leftWidth() {
+  var t = 0;
+  for (var i = 0; i < LEFT_COLS.length; i++) t += LEFT_COLS[i].w;
+  return t;
+}
+
+// how much room is left for the rows once the header has taken its share
+function bodyViewportHeight() {
+  var pane = document.getElementById("rightPane");
+  return Math.max(0, pane.clientHeight - HEADER_H);
+}
+
+function renderHeaders() {
+  var lh = document.getElementById("leftHeader");
+  lh.style.width = leftWidth() + "px";
+  lh.style.height = HEADER_H + "px";
+  var html = "", x = 0;
+  for (var i = 0; i < LEFT_COLS.length; i++) {
+    html += '<div class="headCell" style="left:' + x + 'px; width:' + LEFT_COLS[i].w +
+            'px; height:' + HEADER_H + 'px">' + LEFT_COLS[i].title + '</div>';
+    x += LEFT_COLS[i].w;
+  }
+  lh.innerHTML = html;
+  document.getElementById("leftPane").style.flexBasis = leftWidth() + "px";
+
+  var rh = document.getElementById("rightHeader");
+  var totalW = UNITS.length * UNIT_PX;
+  rh.style.width = totalW + "px";
+  rh.style.height = HEADER_H + "px";
+  rh.style.position = "sticky";
+  rh.style.top = "0px";
+
+  var half = HEADER_H / 2;
+  var out = "", g = 0;
+  while (g < UNITS.length) {
+    var span = 1;
+    while (g + span < UNITS.length && UNITS[g+span].group === UNITS[g].group) span++;
+    out += '<div class="headCell" style="left:' + (g * UNIT_PX) + 'px; width:' + (span * UNIT_PX) +
+           'px; height:' + half + 'px; border-bottom:1px solid #cfd6dd">' + UNITS[g].group + '</div>';
+    g += span;
+  }
+  for (var u = 0; u < UNITS.length; u++) {
+    var extra = UNITS[u].weekend ? "background:#e7e9ec;" : "";
+    out += '<div class="headCell" style="left:' + (u * UNIT_PX) + 'px; top:' + half + 'px; width:' + UNIT_PX +
+           'px; height:' + half + 'px; font-size:9px;' + extra + '">' + UNITS[u].label + '</div>';
+  }
+  rh.innerHTML = out;
+}
+
+function renderGrid() {
+  var body = document.getElementById("rightBody");
+  var totalH = VIEW.length * ROW_H;
+  var totalW = UNITS.length * UNIT_PX;
+  body.style.width = totalW + "px";
+  body.style.height = totalH + "px";
+
+  var todayIndex = todayColumnIndex();
+  var grid = '<div class="gridLayer" style="width:' + totalW + 'px; height:' + totalH + 'px">';
+  for (var u = 0; u < UNITS.length; u++) {
+    var cls = "gridCol" + (UNITS[u].weekend ? " weekend" : "") + (u === todayIndex ? " today" : "");
+    grid += '<div class="' + cls + '" style="left:' + (u * UNIT_PX) + 'px; width:' + UNIT_PX +
+            'px; height:' + totalH + 'px"></div>';
+  }
+  grid += '</div>';
+  if (todayIndex >= 0) {
+    grid += '<div class="todayLine" style="left:' + (todayIndex * UNIT_PX) + 'px; height:' + totalH + 'px"></div>';
+  }
+  grid += '<svg id="linkLayer" width="' + totalW + '" height="' + totalH + '"></svg>';
+
+  body.innerHTML = grid;
+
+  // the left body starts right under its header, exactly like the right one
+  var lb = document.getElementById("leftBody");
+  lb.style.top = HEADER_H + "px";
+  lb.style.height = totalH + "px";
+  lb.style.width = leftWidth() + "px";
+}
+
+
+/* =========================================================================
+   PART 7 - VIRTUAL ROW RENDERING
+   ========================================================================= */
+
+var renderedFrom = -1, renderedTo = -1;
+
+function visibleRange() {
+  var pane = document.getElementById("rightPane");
+  var top = pane.scrollTop;                     // 0 means row 0 sits just under the header
+  var height = bodyViewportHeight();
+  var from = Math.max(0, Math.floor(top / ROW_H) - BUFFER_ROWS);
+  var to   = Math.min(VIEW.length, Math.ceil((top + height) / ROW_H) + BUFFER_ROWS);
+  return { from: from, to: to };
+}
+
+function renderRows(force) {
+  var range = visibleRange();
+  if (!force && range.from === renderedFrom && range.to === renderedTo) return;
+  renderedFrom = range.from; renderedTo = range.to;
+
+  var leftHtml = "", rightHtml = "";
+  for (var i = range.from; i < range.to; i++) {
+    leftHtml  += buildLeftRow(VIEW[i], i);
+    rightHtml += buildBarRow(VIEW[i], i);
+  }
+
+  document.getElementById("leftBody").innerHTML = leftHtml;
+
+  var body = document.getElementById("rightBody");
+  var old = body.querySelectorAll(".barRow, .bandStripe");
+  for (var k = 0; k < old.length; k++) old[k].remove();
+  body.insertAdjacentHTML("beforeend", rightHtml);
+
+  renderLinks();
+}
+
+function buildLeftRow(v, i) {
+  var r = v.row;
+  var cls = "gRow" + (v.isSection ? " band" : (i % 2 ? " alt" : "")) + (r.id === selectedId ? " sel" : "");
+  var html = '<div class="' + cls + '" data-rowid="' + r.id + '" style="top:' + (i * ROW_H) +
+             'px; height:' + ROW_H + 'px; width:' + leftWidth() + 'px">';
+
+  for (var c = 0; c < LEFT_COLS.length; c++) {
+    var col = LEFT_COLS[c];
+    html += '<div class="gCell' + (col.key === "no" || col.key === "act" ? " ro" : "") +
+            '" style="width:' + col.w + 'px">';
+
+    if (col.key === "grip") {
+      html += '<span class="grip" data-grip="' + r.id + '" title="Seret untuk memindahkan baris">&#8942;&#8942;</span>';
+    }
+    else if (col.key === "no") {
+      html += v.label;
+    }
+    else if (col.key === "act") {
+      html += '<button class="ghost miniBtn" title="insert a row below" ' +
+              'onclick="insertRowAt(rowIndexById(' + r.id + ')+1,\'task\')">+</button>' +
+              '<button class="danger miniBtn" title="delete this row" style="margin-left:3px" ' +
+              'onclick="deleteRow(' + r.id + ')">&times;</button>';
+    }
+    else if (v.isSection) {
+      if (col.key === "name") {
+        html += '<input type="text" data-id="' + r.id + '" data-field="name" value="' + escapeHtml(r.name) +
+                '" placeholder="SECTION TITLE">';
+      }
+    }
+    else if (col.key === "days") {
+      html += '<input type="number" min="1" data-id="' + r.id + '" data-field="days" style="text-align:center" value="' +
+              (v.days === "" ? "" : v.days) + '">';
+    }
+    else if (col.key === "start" || col.key === "finish") {
+      html += '<input type="date" data-id="' + r.id + '" data-field="' + col.key + '" value="' + (r[col.key] || "") + '">';
+    }
+    else if (col.key === "progress") {
+      html += '<input type="number" min="0" max="100" style="text-align:center" data-id="' + r.id +
+              '" data-field="progress" value="' + r.progress + '">';
+    }
+    else if (col.key === "pred") {
+      html += '<input type="text" data-id="' + r.id + '" data-field="pred" placeholder="3FS+2" title="' +
+              'e.g. 3FS, 5SS-1, 7FF" value="' + escapeHtml(predecessorText(r.id)) + '">';
+    }
+    else {
+      var ph = (col.key === "name") ? "Activity name" : (col.key === "category" ? "Category" : "Responsible");
+      html += '<input type="text" data-id="' + r.id + '" data-field="' + col.key + '" placeholder="' + ph +
+              '" value="' + escapeHtml(r[col.key] || "") + '">';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function buildBarRow(v, i) {
+  var top = i * ROW_H;
+  var totalW = UNITS.length * UNIT_PX;
+
+  if (v.isSection) {
+    return '<div class="bandStripe" style="top:' + (top + 3) + 'px; height:' + (ROW_H - 7) +
+           'px; width:' + totalW + 'px"></div>';
+  }
+  if (!v.valid || v.span === 0) {
+    return '<div class="barRow" data-rowid="' + v.row.id + '" style="top:' + top + 'px; height:' + ROW_H +
+           'px; width:' + totalW + 'px"></div>';
+  }
+
+  var r = v.row;
+  var color = getColor(r.category);
+  var bodyColor = tint(color, 0.72);
+  var left = v.first * UNIT_PX;
+  var width = v.span * UNIT_PX;
+  var barH = ROW_H - 10;
+  var barTop = 5;
+
+  var html = '<div class="barRow" data-rowid="' + r.id + '" style="top:' + top + 'px; height:' + ROW_H +
+             'px; width:' + totalW + 'px">';
+
+  if (v.milestone) {
+    var size = barH - 2;
+    html += '<div class="diamond" data-role="move" data-rowid="' + r.id + '" style="left:' +
+            (left + (UNIT_PX - size) / 2) + 'px; top:' + (barTop + 1) + 'px; width:' + size + 'px; height:' + size + 'px"></div>';
+    html += '<div class="barLabelOut" style="left:' + (left + width + 4) + 'px; top:' + barTop +
+            'px; height:' + barH + 'px">' + escapeHtml(r.name) + '</div>';
+  } else {
+    var fitsInside = (String(r.name).length * 5.9) < (width - 18);
+    html += '<div class="bar" data-role="move" data-rowid="' + r.id + '" style="left:' + left + 'px; width:' + width +
+            'px; top:' + barTop + 'px; height:' + barH + 'px; background:#' + bodyColor + '; border-color:#' + color + '">' +
+              '<div class="barFill" style="width:' + r.progress + '%; background:#' + color + '; opacity:.85"></div>' +
+              (fitsInside ? '<div class="barLabelIn">' + escapeHtml(r.name) + '</div>' : '') +
+              '<div class="handle l" data-role="resizeStart" data-rowid="' + r.id + '"></div>' +
+              '<div class="handle r" data-role="resizeFinish" data-rowid="' + r.id + '"></div>' +
+            '</div>';
+    if (!fitsInside) {
+      html += '<div class="barLabelOut" style="left:' + (left + width + 5) + 'px; top:' + barTop +
+              'px; height:' + barH + 'px">' + escapeHtml(r.name) + '</div>';
+    }
+  }
+
+  var dotTop = barTop + (barH - 11) / 2;
+  html += '<div class="conn" data-role="linkFrom" data-end="start" data-rowid="' + r.id +
+          '" title="drag from here to link the START of this activity" style="left:' + (left - 13) + 'px; top:' + dotTop + 'px"></div>';
+  html += '<div class="conn" data-role="linkFrom" data-end="finish" data-rowid="' + r.id +
+          '" title="drag from here to link the FINISH of this activity" style="left:' + (left + width + 2) + 'px; top:' + dotTop + 'px"></div>';
+
+  html += '</div>';
+  return html;
+}
+
+function redrawSingleBar(id) {
+  buildView(); buildTimeline();
+  var i = POS[id];
+  if (i === undefined || i < renderedFrom || i >= renderedTo) return;
+  var oldRow = document.querySelector('#rightBody .barRow[data-rowid="' + id + '"]');
+  if (!oldRow) return;
+  oldRow.insertAdjacentHTML("afterend", buildBarRow(VIEW[i], i));
+  oldRow.remove();
+  renderLinks();
+}
+
+
+/* =========================================================================
+   PART 8 - DRAWING THE DEPENDENCY ARROWS
+   ========================================================================= */
+
+function barGeometry(v) {
+  if (!v || v.isSection || !v.valid || v.span === 0) return null;
+  var left = v.first * UNIT_PX;
+  var width = v.span * UNIT_PX;
+  if (v.milestone) {
+    var mid = left + UNIT_PX / 2;
+    return { startX: mid, finishX: mid, midY: POS[v.row.id] * ROW_H + ROW_H / 2, rowIndex: POS[v.row.id] };
+  }
+  return { startX: left, finishX: left + width,
+           midY: POS[v.row.id] * ROW_H + ROW_H / 2, rowIndex: POS[v.row.id] };
+}
+
+function linkGeometry(link) {
+  var a = VIEW[POS[link.fromId]], b = VIEW[POS[link.toId]];
+  var ga = barGeometry(a), gb = barGeometry(b);
+  if (!ga || !gb) return null;
+
+  var ends = linkEnds(link.type);
+  var x1 = (ends.from === "start") ? ga.startX : ga.finishX;
+  var x2 = (ends.to   === "start") ? gb.startX : gb.finishX;
+  var y1 = ga.midY, y2 = gb.midY;
+
+  var exitDir  = (ends.from === "start") ? -1 : 1;
+  var entryDir = (ends.to   === "start") ? -1 : 1;
+
+  var ex = x1 + exitDir * STUB;
+  var tx = x2 + entryDir * STUB;
+
+  var ymid;
+  if (gb.rowIndex > ga.rowIndex)      ymid = gb.rowIndex * ROW_H;
+  else if (gb.rowIndex < ga.rowIndex) ymid = (gb.rowIndex + 1) * ROW_H;
+  else                                ymid = y1;
+
+  var points = [[x1,y1],[ex,y1],[ex,ymid],[tx,ymid],[tx,y2],[x2,y2]];
+
+  return {
+    points: points,
+    arrowX: x2, arrowY: y2,
+    arrowDir: (entryDir === -1) ? 1 : -1,
+    tagX: (ex + tx) / 2, tagY: ymid,
+    fromIndex: ga.rowIndex, toIndex: gb.rowIndex
+  };
+}
+
+function renderLinks() {
+  var layer = document.getElementById("linkLayer");
+  if (!layer) return;
+
+  if (!document.getElementById("showLinks").checked) { layer.innerHTML = ""; return; }
+  var withTags = document.getElementById("showLinkTags").checked;
+
+  var out = "";
+  var from = renderedFrom - BUFFER_ROWS, to = renderedTo + BUFFER_ROWS;
+
+  for (var i = 0; i < LINKS.length; i++) {
+    var link = LINKS[i];
+    var g = linkGeometry(link);
+    if (!g) continue;
+
+    var lo = Math.min(g.fromIndex, g.toIndex), hi = Math.max(g.fromIndex, g.toIndex);
+    if (hi < from || lo > to) continue;
+
+    var bad = linkIsViolated(link);
+    var d = "M " + g.points.map(function (p) { return p[0] + " " + p[1]; }).join(" L ");
+
+    out += '<path class="linkHit" data-linkid="' + link.id + '" d="' + d + '"></path>';
+    out += '<path class="linkPath' + (bad ? " bad" : "") + '" d="' + d + '"></path>';
+
+    var ax = g.arrowX, ay = g.arrowY, dir = g.arrowDir;
+    out += '<polygon class="linkHead' + (bad ? " bad" : "") + '" points="' +
+             ax + "," + ay + " " +
+             (ax - dir * ARROW) + "," + (ay - ARROW * 0.75) + " " +
+             (ax - dir * ARROW) + "," + (ay + ARROW * 0.75) + '"></polygon>';
+
+    if (withTags) {
+      var tag = link.type + (link.lag > 0 ? "+" + link.lag : (link.lag < 0 ? link.lag : ""));
+      out += '<text class="linkTag' + (bad ? " bad" : "") + '" x="' + g.tagX + '" y="' + (g.tagY - 2) +
+             '" text-anchor="middle">' + tag + '</text>';
+    }
+  }
+
+  layer.innerHTML = out;
+}
+
+
+/* =========================================================================
+   PART 9 - SCROLL SYNC
+   ---------------------------------------------------------------------
+   The right header is sticky, so it takes care of itself both ways: it
+   scrolls sideways with the timeline and stays put while scrolling down.
+   Only the left body has to be moved by hand.
+   ========================================================================= */
+
+var rightPane = document.getElementById("rightPane");
+var leftBody  = document.getElementById("leftBody");
+var scrollTicking = false;
+
+rightPane.addEventListener("scroll", function () {
+  if (scrollTicking) return;
+  scrollTicking = true;
+  requestAnimationFrame(function () {
+    leftBody.style.transform = "translateY(" + (-rightPane.scrollTop) + "px)";
+    renderRows();
+    hideLinkPopup();
+    scrollTicking = false;
+  });
+});
+
+document.getElementById("viewport").addEventListener("mousedown", function (e) {
+  var holder = e.target.closest("[data-rowid]");
+  if (!holder) return;
+  var id = Number(holder.getAttribute("data-rowid"));
+  if (id === selectedId) return;
+  var old = document.querySelector('.leftPane .gRow.sel');
+  if (old) old.classList.remove("sel");
+  selectedId = id;
+  var fresh = document.querySelector('.leftPane .gRow[data-rowid="' + id + '"]');
+  if (fresh) fresh.classList.add("sel");
+});
+
+function scrollToToday() {
+  var t = todayColumnIndex();
+  if (t < 0) { alert("Today is outside the project period."); return; }
+  rightPane.scrollLeft = Math.max(0, t * UNIT_PX - rightPane.clientWidth / 2);
+}
+function scrollToTop() {
+  rightPane.scrollTop = 0;
+  leftBody.style.transform = "translateY(0px)";
+  renderRows(true);
+}
+
+// bring a row into view, keeping clear of the header
+function focusRow(id) {
+  var i = POS[id];
+  if (i === undefined) return;
+  var wanted = i * ROW_H;
+  var view = bodyViewportHeight();
+  if (wanted < rightPane.scrollTop || wanted > rightPane.scrollTop + view - ROW_H * 2) {
+    rightPane.scrollTop = Math.max(0, wanted - view / 2);
+    leftBody.style.transform = "translateY(" + (-rightPane.scrollTop) + "px)";
+    renderRows(true);
+  }
+  var box = document.querySelector('.leftPane [data-id="' + id + '"][data-field="name"]');
+  if (box) box.focus();
+}
+
+
+/* =========================================================================
+   PART 9b - MENYERET BARIS UNTUK MENGUBAH URUTAN
+   ---------------------------------------------------------------------
+   Baris digambar dengan posisi mutlak dan hanya yang terlihat yang dibuat,
+   jadi cara seret bawaan HTML tidak dapat dipakai. Perpindahan dihitung
+   sendiri dari posisi tetikus: baris tujuan ditentukan dari jarak tegak,
+   lalu garis hijau menunjukkan tempat baris akan disisipkan.
+
+   Menyeret hanya mengubah URUTAN. Ketergantungan antar pekerjaan tetap utuh
+   karena disimpan memakai penanda baris, bukan nomor urutnya.
+   ========================================================================= */
+
+var seret = null;
+
+(function siapkanSeret() {
+  var bayangan = document.createElement("div");
+  bayangan.id = "seretBayangan";
+  document.body.appendChild(bayangan);
+
+  var tanda = document.createElement("div");
+  tanda.className = "sisipTanda";
+  tanda.style.display = "none";
+
+  var leftBodyEl = document.getElementById("leftBody");
+  leftBodyEl.appendChild(tanda);
+
+  document.getElementById("leftPane").addEventListener("pointerdown", function (e) {
+    var g = e.target.closest("[data-grip]");
+    if (!g) return;
+    e.preventDefault();
+
+    var id = Number(g.getAttribute("data-grip"));
+    var r = rowById(id);
+    if (!r) return;
+
+    seret = { id: id, dari: rowIndexById(id), ke: null, mulaiY: e.clientY, jalan: false };
+    g.setPointerCapture(e.pointerId);
+
+    bayangan.textContent = (r.type === "section" ? "\u25A0 " : "") + (r.name || "(tanpa nama)");
+    document.body.style.userSelect = "none";
+  });
+
+  document.addEventListener("pointermove", function (e) {
+    if (!seret) return;
+    if (!seret.jalan && Math.abs(e.clientY - seret.mulaiY) < 4) return;   // masih ragu, jangan mulai
+    seret.jalan = true;
+
+    bayangan.style.display = "block";
+    bayangan.style.left = (e.clientX + 14) + "px";
+    bayangan.style.top  = (e.clientY - 10) + "px";
+
+    var baris = document.querySelector('.leftPane .gRow[data-rowid="' + seret.id + '"]');
+    if (baris) baris.classList.add("sedangDiseret");
+
+    // ubah posisi tetikus jadi nomor sisipan
+    var kotak = document.getElementById("rightPane").getBoundingClientRect();
+    var y = e.clientY - kotak.top - HEADER_H + rightPane.scrollTop;
+    var titik = Math.max(0, Math.min(VIEW.length, Math.round(y / ROW_H)));
+    seret.ke = titik;
+
+    tanda.style.display = "block";
+    tanda.style.top = (titik * ROW_H) + "px";
+    tanda.style.width = leftWidth() + "px";
+  });
+
+  document.addEventListener("pointerup", function () {
+    if (!seret) return;
+    var info = seret;
+    seret = null;
+
+    bayangan.style.display = "none";
+    tanda.style.display = "none";
+    document.body.style.userSelect = "";
+    var baris = document.querySelector('.leftPane .gRow.sedangDiseret');
+    if (baris) baris.classList.remove("sedangDiseret");
+
+    if (!info.jalan || info.ke === null) return;
+
+    // Nomor sisipan mengacu ke daftar tampil (VIEW); ubah ke nomor pada ROWS.
+    var tujuan;
+    if (info.ke >= VIEW.length) tujuan = ROWS.length;
+    else tujuan = VIEW[info.ke].index;
+
+    var asal = rowIndexById(info.id);
+    if (asal === -1) return;
+    if (tujuan === asal || tujuan === asal + 1) return;    // tidak berpindah
+
+    pushUndo();
+    var pindah = ROWS.splice(asal, 1)[0];
+    if (tujuan > asal) tujuan--;                            // daftar menyusut setelah diangkat
+    ROWS.splice(tujuan, 0, pindah);
+
+    selectedId = info.id;
+    markDirty();
+    renderAll();
+
+    var pesan = document.getElementById("editInfo");
+    pesan.className = "okMsg";
+    pesan.textContent = '"' + (pindah.name || "baris") + '" dipindahkan' +
+      (kunciNomor() ? " \u2014 nomor tetap, ketergantungan tetap utuh"
+                    : " \u2014 penomoran mengikuti urutan baru, ketergantungan tetap utuh");
+  });
+})();
+
+
+/* =========================================================================
+   PART 10 - DRAGGING : moving a bar, resizing it, or drawing a link
+   ========================================================================= */
+
+var drag = null;
+var linkDrag = null;
+var dragTip = document.getElementById("dragTip");
+
+document.getElementById("rightBody").addEventListener("pointerdown", function (e) {
+  var target = e.target.closest("[data-role]");
+  if (!target) return;
+
+  var role = target.getAttribute("data-role");
+  var id = Number(target.getAttribute("data-rowid"));
+  var r = rowById(id);
+  if (!r) return;
+  e.preventDefault();
+
+  if (role === "linkFrom") {
+    var g = barGeometry(VIEW[POS[id]]);
+    if (!g) return;
+    var end = target.getAttribute("data-end");
+    linkDrag = {
+      fromId: id, fromEnd: end,
+      x0: (end === "start") ? g.startX : g.finishX,
+      y0: g.midY
+    };
+    document.body.classList.add("linking");
+    target.setPointerCapture(e.pointerId);
+    return;
+  }
+
+  var barEl = (role === "move" && target.classList.contains("diamond")) ? target : target.closest(".bar") || target;
+
+  drag = {
+    id: id, role: role, el: barEl,
+    startX: e.clientX,
+    origLeft: parseFloat(barEl.style.left),
+    origWidth: parseFloat(barEl.style.width) || UNIT_PX,
+    origStart: r.start, origFinish: r.finish,
+    delta: 0, moved: false
+  };
+  barEl.classList.add("dragging");
+  barEl.setPointerCapture(e.pointerId);
+  document.body.style.userSelect = "none";
+});
+
+document.addEventListener("pointermove", function (e) {
+
+  if (linkDrag) {
+    var body = document.getElementById("rightBody");
+    var box = body.getBoundingClientRect();
+    var mx = e.clientX - box.left, my = e.clientY - box.top;
+    var layer = document.getElementById("linkLayer");
+    var existing = layer.querySelector(".rubber");
+    var d = "M " + linkDrag.x0 + " " + linkDrag.y0 + " L " + mx + " " + my;
+    if (existing) existing.setAttribute("d", d);
+    else layer.insertAdjacentHTML("beforeend", '<path class="rubber" d="' + d + '"></path>');
+
+    dragTip.style.display = "block";
+    dragTip.style.left = (e.clientX + 14) + "px";
+    dragTip.style.top = (e.clientY - 30) + "px";
+    dragTip.textContent = "drop on a bar to link from its " + linkDrag.fromEnd.toUpperCase();
+    return;
+  }
+
+  if (!drag) return;
+
+  var deltaUnits = Math.round((e.clientX - drag.startX) / UNIT_PX);
+  if (deltaUnits !== drag.delta) drag.moved = true;
+  drag.delta = deltaUnits;
+
+  var scale = document.getElementById("scale").value;
+  var s = toDate(drag.origStart), f = toDate(drag.origFinish);
+  var newStart = s, newFinish = f;
+
+  if (drag.role === "move") {
+    newStart  = shiftByUnits(s, deltaUnits, scale);
+    newFinish = shiftByUnits(f, deltaUnits, scale);
+    drag.el.style.left = (drag.origLeft + deltaUnits * UNIT_PX) + "px";
+  }
+  else if (drag.role === "resizeStart") {
+    newStart = shiftByUnits(s, deltaUnits, scale);
+    if (newStart > f) newStart = f;
+    var w1 = Math.max(UNIT_PX, drag.origWidth - deltaUnits * UNIT_PX);
+    drag.el.style.left = (drag.origLeft + (drag.origWidth - w1)) + "px";
+    drag.el.style.width = w1 + "px";
+  }
+  else {
+    newFinish = shiftByUnits(f, deltaUnits, scale);
+    if (newFinish < s) newFinish = s;
+    drag.el.style.width = Math.max(UNIT_PX, drag.origWidth + deltaUnits * UNIT_PX) + "px";
+  }
+
+  drag.newStart = newStart; drag.newFinish = newFinish;
+
+  dragTip.style.display = "block";
+  dragTip.style.left = (e.clientX + 14) + "px";
+  dragTip.style.top = (e.clientY - 30) + "px";
+  dragTip.textContent = toDisplay(newStart) + "  \u2192  " + toDisplay(newFinish) +
+                        "   (" + countDays(newStart, newFinish) + " d)";
+});
+
+document.addEventListener("pointerup", function (e) {
+
+  if (linkDrag) {
+    var info = linkDrag;
+    linkDrag = null;
+    document.body.classList.remove("linking");
+    dragTip.style.display = "none";
+    var rubber = document.querySelector("#linkLayer .rubber");
+    if (rubber) rubber.remove();
+
+    var under = document.elementFromPoint(e.clientX, e.clientY);
+    var barHit = under ? under.closest(".bar, .diamond") : null;
+    if (!barHit) { document.getElementById("editInfo").textContent = "link cancelled"; return; }
+
+    var toId = Number(barHit.getAttribute("data-rowid"));
+    var rect = barHit.getBoundingClientRect();
+    var toEnd = (e.clientX < rect.left + rect.width / 2) ? "start" : "finish";
+
+    var type = "FS";
+    if (info.fromEnd === "finish" && toEnd === "start")  type = "FS";
+    if (info.fromEnd === "start"  && toEnd === "start")  type = "SS";
+    if (info.fromEnd === "finish" && toEnd === "finish") type = "FF";
+    if (info.fromEnd === "start"  && toEnd === "finish") type = "SF";
+
+    var made = addLink(info.fromId, toId, type, 0);
+    if (made) {
+      renderAll();
+      var note = document.getElementById("editInfo");
+      note.className = "okMsg";
+      note.textContent = type + " link added: " + LABEL[info.fromId] + " \u2192 " + LABEL[toId];
+    }
+    return;
+  }
+
+  if (!drag) return;
+
+  var el = drag.el, id = drag.id, moved = drag.moved;
+  var newStart = drag.newStart, newFinish = drag.newFinish;
+  el.classList.remove("dragging");
+  dragTip.style.display = "none";
+  document.body.style.userSelect = "";
+  drag = null;
+
+  if (!moved) { renderRows(true); return; }
+
+  pushUndo();
+  var r = rowById(id);
+  if (r) { r.start = toText(newStart); r.finish = toText(newFinish); }
+  markDirty();
+  renderAll();
+
+  var msg = document.getElementById("editInfo");
+  msg.className = "okMsg";
+  msg.textContent = (r ? r.name || "row" : "row") + " moved to " + toDisplay(newStart) + " - " + toDisplay(newFinish);
+
+  var broken = 0;
+  for (var i = 0; i < LINKS.length; i++) {
+    if ((LINKS[i].fromId === id || LINKS[i].toId === id) && linkIsViolated(LINKS[i])) broken++;
+  }
+  if (broken > 0) {
+    msg.className = "errMsg";
+    msg.textContent += "  \u2014  " + broken + " dependency now broken (shown in red)";
+  }
+});
+
+
+/* =========================================================================
+   PART 11 - CLICKING AN ARROW TO EDIT IT
+   ========================================================================= */
+
+var popupLinkId = null;
+var linkPopup = document.getElementById("linkPopup");
+
+document.getElementById("rightBody").addEventListener("click", function (e) {
+  var hit = e.target.closest(".linkHit");
+  if (!hit) return;
+  showLinkPopup(Number(hit.getAttribute("data-linkid")), e.clientX, e.clientY);
+});
+
+function showLinkPopup(id, x, y) {
+  var link = linkById(id);
+  if (!link) return;
+  popupLinkId = id;
+
+  document.getElementById("linkPopupTitle").textContent =
+    "Link  " + LABEL[link.fromId] + "  \u2192  " + LABEL[link.toId];
+  document.getElementById("linkPopupType").value = link.type;
+  document.getElementById("linkPopupLag").value = link.lag;
+
+  var warn = document.getElementById("linkPopupWarn");
+  if (linkIsViolated(link)) {
+    warn.style.display = "block";
+    warn.textContent = "The current dates break this rule.";
+  } else warn.style.display = "none";
+
+  linkPopup.style.display = "block";
+  var w = linkPopup.offsetWidth, h = linkPopup.offsetHeight;
+  linkPopup.style.left = Math.min(x + 10, window.innerWidth  - w - 12) + "px";
+  linkPopup.style.top  = Math.min(y + 10, window.innerHeight - h - 12) + "px";
+}
+function hideLinkPopup() { linkPopup.style.display = "none"; popupLinkId = null; }
+
+function applyLinkPopup() {
+  var link = linkById(popupLinkId);
+  if (!link) { hideLinkPopup(); return; }
+  pushUndo();
+  link.type = document.getElementById("linkPopupType").value;
+  link.lag = Math.round(Number(document.getElementById("linkPopupLag").value) || 0);
+  hideLinkPopup();
+  markDirty(); renderAll();
+}
+function deleteLinkFromPopup() {
+  if (popupLinkId !== null && removeLink(popupLinkId)) { hideLinkPopup(); renderAll(); }
+  else hideLinkPopup();
+}
+
+document.addEventListener("mousedown", function (e) {
+  if (linkPopup.style.display !== "block") return;
+  if (e.target.closest("#linkPopup") || e.target.closest(".linkHit")) return;
+  hideLinkPopup();
+});
+
+
+/* =========================================================================
+   PART 12 - THE TABLE VIEW
+   ========================================================================= */
+
+var tblScroll = document.getElementById("tblScroll");
+var TABLE_ROW_H = 30;
+var tableHidden = false;
+
+tblScroll.addEventListener("scroll", function () { renderTable(); });
+
+function toggleTable() {
+  tableHidden = !tableHidden;
+  document.getElementById("tableHolder").style.display = tableHidden ? "none" : "block";
+  document.getElementById("tableToggleBtn").textContent = tableHidden ? "Show table" : "Hide table";
+  if (!tableHidden) renderTable();
+}
+
+function renderTable() {
+  if (tableHidden) return;
+  var body = document.getElementById("taskBody");
+  var top = tblScroll.scrollTop;
+  var height = tblScroll.clientHeight || 360;
+
+  var from = Math.max(0, Math.floor(top / TABLE_ROW_H) - 5);
+  var to   = Math.min(VIEW.length, Math.ceil((top + height) / TABLE_ROW_H) + 5);
+
+  var html = "";
+  if (from > 0) html += '<tr style="height:' + (from * TABLE_ROW_H) + 'px"><td colspan="12"></td></tr>';
+
+  for (var i = from; i < to; i++) {
+    var v = VIEW[i], r = v.row;
+    var isSection = v.isSection;
+    var hide = isSection ? 'style="visibility:hidden"' : '';
+
+    html += '<tr class="' + (isSection ? "sectionRow" : "") + '" style="height:' + TABLE_ROW_H + 'px">';
+    html += '<td style="text-align:center;font-weight:bold">' + v.label + '</td>';
+    html += '<td><select data-id="' + r.id + '" data-field="type">' +
+              '<option value="task"' + (isSection ? "" : " selected") + '>Activity</option>' +
+              '<option value="section"' + (isSection ? " selected" : "") + '>SECTION</option>' +
+            '</select></td>';
+    html += '<td><input type="text" class="cTask" data-id="' + r.id + '" data-field="name" value="' +
+              escapeHtml(r.name) + '"></td>';
+    html += '<td><input type="text" data-id="' + r.id + '" data-field="category" value="' +
+              escapeHtml(r.category || "") + '" ' + hide + '></td>';
+    html += '<td><input type="date" data-id="' + r.id + '" data-field="start" value="' + (r.start || "") + '" ' + hide + '></td>';
+    html += '<td><input type="date" data-id="' + r.id + '" data-field="finish" value="' + (r.finish || "") + '" ' + hide + '></td>';
+    html += '<td style="text-align:center" data-id="' + r.id + '" data-field="days">' + (isSection ? "" : (v.days || "")) + '</td>';
+    html += '<td><input type="number" min="0" max="100" data-id="' + r.id + '" data-field="progress" value="' +
+              r.progress + '" ' + hide + '></td>';
+    html += '<td><input type="text" data-id="' + r.id + '" data-field="pred" placeholder="3FS+2" value="' +
+              escapeHtml(predecessorText(r.id)) + '" ' + hide + '></td>';
+    html += '<td><input type="text" data-id="' + r.id + '" data-field="responsible" value="' +
+              escapeHtml(r.responsible || "") + '" ' + hide + '></td>';
+    html += '<td style="text-align:center;white-space:nowrap">' +
+              '<button class="ghost miniBtn" onclick="moveRow(' + r.id + ',-1)">&#9650;</button> ' +
+              '<button class="ghost miniBtn" onclick="moveRow(' + r.id + ',1)">&#9660;</button></td>';
+    html += '<td style="text-align:center"><button class="danger miniBtn" onclick="deleteRow(' + r.id + ')">&times;</button></td>';
+    html += '</tr>';
+  }
+
+  if (to < VIEW.length) html += '<tr style="height:' + ((VIEW.length - to) * TABLE_ROW_H) + 'px"><td colspan="12"></td></tr>';
+  body.innerHTML = html;
+}
+
+
+/* =========================================================================
+   PART 13 - ONE LISTENER FOR EVERY INPUT IN BOTH VIEWS
+   ========================================================================= */
+
+/* ---------------------------------------------------------------------
+   Kotak tanggal perlu perlakuan khusus.
+
+   <input type="date"> memicu "change" begitu isinya membentuk tanggal yang
+   sah. Saat tahun diketik angka demi angka, "2027" sempat terbaca 0002,
+   lalu 0020, lalu 0202 -- dan pada setiap langkah itu tampilan digambar
+   ulang, kotak yang sedang diketik dibuang dan dibuat baru, kursor pun
+   terlempar. Tahun 0002 juga membuat rentang waktu melar sampai puluhan
+   ribu hari sehingga aplikasi tersendat.
+
+   Jadi tanggal hanya dicatat bila tahunnya sudah masuk akal. Selama belum,
+   ketikan dibiarkan apa adanya sampai pemakai pindah dari kotak itu.
+--------------------------------------------------------------------- */
+var TAHUN_MIN = 1990, TAHUN_MAX = 2200;
+
+function tahunSudahMasukAkal(nilai) {
+  if (!nilai) return true;                       // dikosongkan, itu sah
+  var m = String(nilai).match(/^(\d{4})-\d{2}-\d{2}$/);
+  if (!m) return false;
+  var th = Number(m[1]);
+  return th >= TAHUN_MIN && th <= TAHUN_MAX;
+}
+
+document.addEventListener("change", function (e) {
+  var el = e.target;
+  var id = el.getAttribute && el.getAttribute("data-id");
+  if (!id) return;
+  var field = el.getAttribute("data-field");
+
+  if ((field === "start" || field === "finish") && !tahunSudahMasukAkal(el.value)) {
+    el.classList.add("belumSah");
+    return;                                       // tunggu sampai selesai diketik
+  }
+  el.classList.remove("belumSah");
+  updateField(Number(id), field, el.value, el);
+});
+
+/* Saat meninggalkan kotak tanggal, apa pun yang tersisa diselesaikan:
+   yang sah dicatat, yang tidak dikembalikan ke nilai sebelumnya. */
+document.addEventListener("focusout", function (e) {
+  var el = e.target;
+  var id = el.getAttribute && el.getAttribute("data-id");
+  if (!id) return;
+  var field = el.getAttribute("data-field");
+  if (field !== "start" && field !== "finish") return;
+
+  el.classList.remove("belumSah");
+  var r = rowById(Number(id));
+  if (!r) return;
+
+  if (tahunSudahMasukAkal(el.value)) {
+    if (el.value !== r[field]) updateField(Number(id), field, el.value, el);
+  } else {
+    el.value = r[field] || "";                    // kembalikan, jangan simpan tahun ngawur
+    document.getElementById("editInfo").className = "warnMsg";
+    document.getElementById("editInfo").textContent =
+      "Tanggal diabaikan \u2014 tahun harus antara " + TAHUN_MIN + " dan " + TAHUN_MAX + ".";
+  }
+});
+
+document.addEventListener("input", function (e) {
+  var el = e.target;
+  var id = el.getAttribute && el.getAttribute("data-id");
+  if (!id) { markDirty(); return; }
+  var field = el.getAttribute("data-field");
+  if (field !== "name" && field !== "responsible" && field !== "category") return;
+  var r = rowById(Number(id));
+  if (!r) return;
+  r[field] = el.value;
+  mirrorField(Number(id), field, el.value, el);
+  if (field !== "responsible") redrawSingleBar(Number(id));
+  markDirty();
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key !== "Enter") return;
+  var el = e.target;
+  if (!el.getAttribute || !el.getAttribute("data-id")) return;
+  var field = el.getAttribute("data-field");
+  var id = Number(el.getAttribute("data-id"));
+  var i = rowIndexById(id);
+  if (i === -1 || i + 1 >= ROWS.length) return;
+  var nextId = ROWS[i+1].id;
+  var pane = el.closest(".leftPane") ? ".leftPane " : "#taskBody ";
+  var next = document.querySelector(pane + '[data-id="' + nextId + '"][data-field="' + field + '"]');
+  if (next) { e.preventDefault(); next.focus(); if (next.select) next.select(); }
+});
+
+
+/* =========================================================================
+   PART 14 - THE MASTER RENDER
+   ========================================================================= */
+
+function renderAll(keepFocusEl) {
+  var focusInfo = null;
+  var active = keepFocusEl || document.activeElement;
+  if (active && active.getAttribute && active.getAttribute("data-id")) {
+    focusInfo = {
+      id: active.getAttribute("data-id"),
+      field: active.getAttribute("data-field"),
+      inLeft: !!active.closest(".leftPane")
+    };
+  }
+
+  buildView();
+  buildTimeline();
+  renderHeaders();
+  renderGrid();
+
+  // a redraw can leave the pane scrolled past the end, pull it back so the
+  // first rows never end up hidden behind the header
+  var maxScroll = Math.max(0, VIEW.length * ROW_H - bodyViewportHeight());
+  if (rightPane.scrollTop > maxScroll) rightPane.scrollTop = maxScroll;
+  leftBody.style.transform = "translateY(" + (-rightPane.scrollTop) + "px)";
+
+  renderRows(true);
+  renderTable();
+  renderLegend();
+
+  if (focusInfo) {
+    var scope = focusInfo.inLeft ? ".leftPane " : "#taskBody ";
+    var back = document.querySelector(scope + '[data-id="' + focusInfo.id + '"][data-field="' + focusInfo.field + '"]');
+    if (back && document.activeElement !== back) back.focus();
+  }
+}
+
+function renderLegend() {
+  var legend = "";
+  var cats = Object.keys(categoryColorMap);
+  for (var L = 0; L < cats.length; L++) {
+    legend += '<div><span class="box" style="background:#' + tint(categoryColorMap[cats[L]],0.72) +
+              ';border-color:#' + categoryColorMap[cats[L]] + '"></span>' + escapeHtml(cats[L]) + '</div>';
+  }
+  legend += '<div><span class="box completedColor" style="background:#4472C4"></span>Completed portion</div>';
+  legend += '<div><span class="box" style="background:#c00000;transform:rotate(45deg)"></span>Milestone</div>';
+  legend += '<div><span class="box" style="background:#fff6dd"></span>Today</div>';
+  legend += '<div><svg width="34" height="10"><path d="M0 5 L26 5" stroke="#5a6a7a" stroke-width="1.3" fill="none"/>' +
+            '<polygon points="32,5 26,3 26,7" fill="#5a6a7a"/></svg>Dependency (FS / SS / FF / SF)</div>';
+  legend += '<div><svg width="34" height="10"><path d="M0 5 L26 5" stroke="#c00000" stroke-width="1.3" ' +
+            'stroke-dasharray="4 3" fill="none"/><polygon points="32,5 26,3 26,7" fill="#c00000"/></svg>Broken link</div>';
+  document.getElementById("legendBox").innerHTML = legend;
+}
+
+document.getElementById("scale").addEventListener("change", function () { markDirty(); renderAll(); });
+document.getElementById("zoom").addEventListener("change", function () {
+  UNIT_PX = Number(this.value);
+  renderAll();
+});
+document.getElementById("viewHeight").addEventListener("change", function () {
+  document.getElementById("viewport").style.height = this.value + "px";
+  renderRows(true);
+});
+document.getElementById("lockNo").addEventListener("change", function () {
+  markDirty();
+  renderAll();
+});
+document.getElementById("showLinks").addEventListener("change", renderLinks);
+document.getElementById("showLinkTags").addEventListener("change", renderLinks);
+window.addEventListener("resize", function () { renderRows(true); });
+
+
+/* =========================================================================
+   PART 15 - SAVE / LOAD PROJECT AS JSON
+   ========================================================================= */
+
+function buildProjectObject() {
+  var rows = [], indexById = {};
+  for (var i = 0; i < ROWS.length; i++) {
+    var r = ROWS[i];
+    indexById[r.id] = i;
+    rows.push({ type:r.type, no:r.no, name:r.name, category:r.category, start:r.start,
+                finish:r.finish, progress:r.progress, responsible:r.responsible });
+  }
+
+  var links = [];
+  for (var k = 0; k < LINKS.length; k++) {
+    var L = LINKS[k];
+    if (indexById[L.fromId] === undefined || indexById[L.toId] === undefined) continue;
+    links.push({ from: indexById[L.fromId], to: indexById[L.toId], type: L.type, lag: L.lag });
+  }
+
+  return {
+    fileType: "JKT09-GANTT-PROJECT",
+    version: FILE_VERSION,
+    savedAt: new Date().toISOString(),
+    project: {
+      name:  document.getElementById("projName").value,
+      by:    document.getElementById("projBy").value,
+      date:  document.getElementById("projDate").value,
+      scale: document.getElementById("scale").value
+    },
+    colorMap: categoryColorMap,
+    rows: rows,
+    links: links
+  };
+}
+
+function applyProjectObject(data) {
+  if (!data || !data.rows) { alert("This file does not contain a valid project."); return false; }
+
+  if (data.project) {
+    document.getElementById("projName").value = data.project.name  || "";
+    document.getElementById("projBy").value   = data.project.by    || "";
+    document.getElementById("projDate").value = data.project.date  || "";
+    document.getElementById("scale").value    = data.project.scale || "week";
+  }
+  categoryColorMap = data.colorMap ? JSON.parse(JSON.stringify(data.colorMap)) : {};
+
+  ROWS = [];
+  for (var i = 0; i < data.rows.length; i++) {
+    var s = data.rows[i];
+    ROWS.push({
+      id: idSeed++,
+      no: Number(s.no) || 0,
+      type: (s.type === "section") ? "section" : "task",
+      name: s.name || "",
+      category: s.category || "",
+      start: s.start || "",
+      finish: s.finish || "",
+      progress: Number(s.progress) || 0,
+      responsible: s.responsible || ""
+    });
+  }
+  if (ROWS.length === 0) { ROWS.push(newRow("section")); ROWS.push(newRow("task")); }
+
+  // Berkas lama belum menyimpan nomor tetap; berikan sekarang mengikuti urutan
+  // yang ada supaya pilihan "Kunci nomor urut" tetap masuk akal.
+  var urut = 1;
+  for (var z = 0; z < ROWS.length; z++) {
+    if (ROWS[z].type === "section") { ROWS[z].no = 0; continue; }
+    if (!ROWS[z].no) ROWS[z].no = urut;
+    urut = Math.max(urut, ROWS[z].no) + 1;
+  }
+  noSeed = urut;
+
+  LINKS = [];
+  var saved = data.links || [];
+  for (var k = 0; k < saved.length; k++) {
+    var a = ROWS[saved[k].from], b = ROWS[saved[k].to];
+    if (!a || !b) continue;
+    if (a.type === "section" || b.type === "section") continue;
+    if (a.id === b.id) continue;
+    if (findLink(a.id, b.id)) continue;
+    if (reaches(b.id, a.id)) continue;
+    LINKS.push(newLink(a.id, b.id, saved[k].type, saved[k].lag));
+  }
+
+  selectedId = null;
+  rightPane.scrollTop = 0;                    // always land on row 1 after a load
+  leftBody.style.transform = "translateY(0px)";
+  undoStack = []; redoStack = []; refreshUndoButtons();
+  return true;
+}
+
+function saveProjectJson() {
+  var data = buildProjectObject();
+  var text = JSON.stringify(data, null, 2);
+  var safeName = (data.project.name || "Gantt_Project").replace(/[^\w\d\- ]/g, "").trim().replace(/\s+/g, "_");
+  saveAs(new Blob([text], { type: "application/json;charset=utf-8" }),
+         safeName + "_" + toText(new Date()) + ".json");
+  document.getElementById("saveInfo").textContent =
+    "project saved (" + data.rows.length + " rows, " + data.links.length + " links)";
+  return true;
+}
+
+function readJsonFile(file) {
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (applyProjectObject(data)) {
+        document.getElementById("importInfo").textContent =
+          "project loaded from " + file.name + (data.savedAt ? "  (saved " + data.savedAt.slice(0,10) + ")" : "");
+        markDirty(); renderAll();
+      }
+    } catch (err) { alert("Cannot read this json file: " + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+var jsonInput = document.getElementById("jsonInput");
+jsonInput.addEventListener("change", function (e) { if (e.target.files[0]) readJsonFile(e.target.files[0]); });
+
+var AUTOSAVE_KEY = "jkt09_gantt_autosave";
+var autoSaveTimer = null;
+
+function markDirty() {
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(doAutoSave, 900);
+}
+function doAutoSave() {
+  try {
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(buildProjectObject()));
+    document.getElementById("saveInfo").textContent = "auto-saved " + new Date().toLocaleTimeString();
+  } catch (err) { /* storage blocked or full */ }
+}
+function restoreAutoSave() {
+  var text = localStorage.getItem(AUTOSAVE_KEY);
+  if (!text) { alert("No auto-saved session found in this browser."); return; }
+  try {
+    var data = JSON.parse(text);
+    if (!confirm("Restore the session saved on " + (data.savedAt || "").replace("T"," ").slice(0,16) + " ?")) return;
+    if (applyProjectObject(data)) {
+      document.getElementById("saveInfo").textContent = "last session restored";
+      renderAll();
+    }
+  } catch (err) { alert("The auto-saved data is damaged."); }
+}
+function clearAutoSave() {
+  localStorage.removeItem(AUTOSAVE_KEY);
+  document.getElementById("saveInfo").textContent = "auto-save cleared";
+}
+
+
+/* =========================================================================
+   PART 16 - IMPORT FILE (drag & drop)
+   ========================================================================= */
+
+var dropZone = document.getElementById("dropZone");
+var fileInput = document.getElementById("fileInput");
+var DATA_SHEET = "GanttData";
+
+dropZone.addEventListener("click", function () { fileInput.click(); });
+fileInput.addEventListener("change", function (e) { if (e.target.files[0]) routeFile(e.target.files[0]); });
+dropZone.addEventListener("dragover", function (e) { e.preventDefault(); dropZone.classList.add("hover"); });
+dropZone.addEventListener("dragleave", function () { dropZone.classList.remove("hover"); });
+dropZone.addEventListener("drop", function (e) {
+  e.preventDefault(); dropZone.classList.remove("hover");
+  if (e.dataTransfer.files[0]) routeFile(e.dataTransfer.files[0]);
+});
+
+function routeFile(file) {
+  var lower = file.name.toLowerCase();
+  if (lower.endsWith(".json")) readJsonFile(file); else readExcel(file);
+}
+
+function normalizeExcelDate(value) {
+  if (value === null || value === undefined || value === "") return "";
+  if (value instanceof Date) return toText(value);
+
+  if (typeof value === "number") {
+    var p = XLSX.SSF.parse_date_code(value);
+    if (!p) return "";
+    return p.y + "-" + String(p.m).padStart(2,"0") + "-" + String(p.d).padStart(2,"0");
+  }
+
+  var text = String(value).trim();
+
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(text)) {
+    var a = text.split("-");
+    return a[0] + "-" + String(a[1]).padStart(2,"0") + "-" + String(a[2]).padStart(2,"0");
+  }
+
+  var m = text.match(/^(\d{1,2})[\-\/\s]([A-Za-z]{3,})[\-\/\s](\d{2,4})$/);
+  if (m) {
+    var monthIndex = -1;
+    for (var i = 0; i < MONTHS.length; i++) {
+      if (m[2].toLowerCase().indexOf(MONTHS[i].toLowerCase()) === 0) { monthIndex = i; break; }
+    }
+    if (monthIndex !== -1) {
+      var year = Number(m[3]);
+      if (year < 100) year += 2000;
+      return year + "-" + String(monthIndex + 1).padStart(2,"0") + "-" + String(m[1]).padStart(2,"0");
+    }
+  }
+
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(text)) {
+    var b = text.split(/[\/\-]/);
+    return b[2] + "-" + String(b[1]).padStart(2,"0") + "-" + String(b[0]).padStart(2,"0");
+  }
+
+  var f = new Date(text);
+  return isNaN(f) ? "" : toText(f);
+}
+
+function findColumn(headerRow, keywords) {
+  for (var i = 0; i < headerRow.length; i++) {
+    var head = String(headerRow[i] || "").toLowerCase().replace(/[^a-z%]/g, "");
+    if (head === "") continue;
+    for (var j = 0; j < keywords.length; j++) if (head.indexOf(keywords[j]) !== -1) return i;
+  }
+  return -1;
+}
+
+function findHeaderRowIndex(aoa) {
+  var limit = Math.min(aoa.length, 20);
+  for (var i = 0; i < limit; i++) {
+    var row = aoa[i] || [];
+    var hasTask  = findColumn(row, ["task","activity","description","pekerjaan","kegiatan"]) !== -1;
+    var hasStart = findColumn(row, ["start","mulai","begin"]) !== -1;
+    if (hasTask && hasStart) return i;
+  }
+  return -1;
+}
+
+function readExcel(file) {
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type:"array", cellDates:true });
+
+      var dataSheetName = null;
+      for (var s = 0; s < wb.SheetNames.length; s++) {
+        if (wb.SheetNames[s].toLowerCase() === DATA_SHEET.toLowerCase()) dataSheetName = wb.SheetNames[s];
+      }
+      if (dataSheetName) {
+        var chunks = XLSX.utils.sheet_to_json(wb.Sheets[dataSheetName], { header:1, defval:"" });
+        var joined = "";
+        for (var k = 0; k < chunks.length; k++) joined += String(chunks[k][0] || "");
+        try {
+          var project = JSON.parse(joined);
+          if (applyProjectObject(project)) {
+            document.getElementById("importInfo").textContent =
+              "project restored from the hidden data inside " + file.name +
+              " (" + LINKS.length + " dependencies)";
+            markDirty(); renderAll();
+            return;
+          }
+        } catch (jsonErr) { /* damaged, read it visually instead */ }
+      }
+
+      var sheet = wb.Sheets[wb.SheetNames[0]];
+      var aoa = XLSX.utils.sheet_to_json(sheet, { header:1, defval:"", blankrows:true });
+      if (aoa.length === 0) { alert("The sheet looks empty."); return; }
+
+      var headerIndex = findHeaderRowIndex(aoa);
+      if (headerIndex === -1) {
+        alert("Cannot find a header row.\nThe sheet needs a row containing at least: Task / Activity and Start.");
+        return;
+      }
+
+      var header = aoa[headerIndex];
+      var colType  = findColumn(header, ["type","level","tipe"]);
+      var colTask  = findColumn(header, ["task","activity","description","pekerjaan","kegiatan"]);
+      var colStart = findColumn(header, ["start","mulai","begin"]);
+      var colEnd   = findColumn(header, ["finish","end","selesai"]);
+      var colCat   = findColumn(header, ["category","kategori","area","zone","trade"]);
+      var colProg  = findColumn(header, ["progress","percent","bobot","%"]);
+      var colResp  = findColumn(header, ["responsible","pic","owner","subcon","contractor"]);
+      var colPred  = findColumn(header, ["predecessor","pred","depends","dependency"]);
+
+      var fresh = [], predTexts = [], sectionCount = 0;
+
+      for (var r = headerIndex + 1; r < aoa.length; r++) {
+        var row = aoa[r] || [];
+        var name     = String(row[colTask] || "").trim();
+        var startTxt = (colStart === -1) ? "" : normalizeExcelDate(row[colStart]);
+        var endTxt   = (colEnd   === -1) ? "" : normalizeExcelDate(row[colEnd]);
+        var typeText = (colType  === -1) ? "" : String(row[colType] || "").trim().toLowerCase();
+
+        var isSection = (typeText.indexOf("section") !== -1 || typeText.indexOf("group") !== -1 ||
+                         typeText.indexOf("header") !== -1);
+
+        if (!isSection && name === "") {
+          var firstCell = String(row[0] || "").trim();
+          var restIsEmpty = true;
+          for (var q = 1; q < Math.max(row.length, 6); q++) {
+            if (String(row[q] || "").trim() !== "") { restIsEmpty = false; break; }
+          }
+          if (firstCell !== "" && isNaN(Number(firstCell)) && restIsEmpty) {
+            name = firstCell.replace(/^[A-Z]\s*[\.\)]\s*/i, "").trim();
+            isSection = true;
+          }
+        }
+        if (!isSection && name !== "" && startTxt === "" && endTxt === "") isSection = true;
+
+        if (name === "") continue;
+        if (!isSection && (startTxt === "" || endTxt === "")) continue;
+
+        if (isSection) {
+          fresh.push({ type:"section", name:name, category:"", start:"", finish:"", progress:0, responsible:"" });
+          predTexts.push("");
+          sectionCount++;
+        } else {
+          var responsible = (colResp === -1) ? "" : String(row[colResp] || "").trim();
+          var predFromName = "";
+
+          // our own export writes  name   responsible  [3FS+2]  inside one cell
+          if (/\s{3,}/.test(name)) {
+            var parts = name.split(/\s{3,}/);
+            name = parts[0].trim();
+            var rest = parts.slice(1).join("  ").trim();
+            var bracket = rest.match(/\[([^\]]+)\]/);
+            if (bracket) { predFromName = bracket[1]; rest = rest.replace(bracket[0], "").trim(); }
+            if (responsible === "") responsible = rest;
+          }
+
+          var pv = (colProg === -1) ? 0 : Number(String(row[colProg]).replace("%",""));
+          if (isNaN(pv)) pv = 0;
+          if (pv > 0 && pv <= 1) pv = pv * 100;
+
+          fresh.push({
+            type:"task", name:name,
+            category: (colCat === -1) ? "General" : (String(row[colCat] || "").trim() || "General"),
+            start:startTxt, finish:endTxt,
+            progress: Math.round(pv), responsible: responsible
+          });
+          predTexts.push((colPred === -1) ? predFromName : (String(row[colPred] || "").trim() || predFromName));
+        }
+      }
+
+      if (fresh.length === 0) { alert("No valid row was found under the header."); return; }
+
+      categoryColorMap = {};
+      applyProjectObject({ rows: fresh, colorMap: {}, links: [] });
+
+      buildView();
+      for (var p = 0; p < predTexts.length; p++) {
+        if (!predTexts[p]) continue;
+        setPredecessorText(ROWS[p].id, predTexts[p]);
+      }
+      undoStack = []; redoStack = []; refreshUndoButtons();
+
+      document.getElementById("importInfo").textContent =
+        fresh.length + " rows imported from " + file.name +
+        " (" + sectionCount + " sections, " + LINKS.length + " dependencies)";
+      markDirty(); renderAll();
+
+    } catch (err) { alert("Failed to read the file: " + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function downloadTemplate() {
+  var data = [
+    ["Type","Task","Category","Start","Finish","Progress","Predecessor","Responsible"],
+    ["SECTION","PRECONSTRUCTION","","","","","",""],
+    ["TASK","Engineering & Procurement","Preliminary","2026-09-14","2026-10-25",100,"","Main Contractor"],
+    ["TASK","Site Clearing & Survey","Preliminary","2026-09-28","2026-10-11",100,"1SS+14","Subcon Civil"],
+    ["SECTION","CONSTRUCTION WORKS","","","","","",""],
+    ["TASK","Piling Works","Civil","2026-10-12","2026-11-22",70,"2FS","Subcon Piling"],
+    ["TASK","Pile Cap","Structure","2026-11-23","2027-01-03",40,"3FS","Subcon Structure"]
+  ];
+  var ws = XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"] = [{wch:10},{wch:38},{wch:15},{wch:13},{wch:13},{wch:10},{wch:14},{wch:20}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Schedule");
+  XLSX.writeFile(wb, "Gantt_Input_Template_v6.xlsx");
+}
+
+function loadSample() {
+  var sample = [
+    ["section","PRECONSTRUCTION","","","",0,""],
+    ["task","Engineering & Procurement","Preliminary","2026-09-14","2026-10-25",100,"Main Contractor"],
+    ["task","Temp. Facilities & Admin Building","Preliminary","2026-09-21","2026-11-01",90,"Main Contractor"],
+    ["task","Site Clearing & Survey","Preliminary","2026-09-28","2026-10-11",100,"Subcon Civil"],
+    ["section","CONSTRUCTION WORKS","","","",0,""],
+    ["task","Piling Works","Civil","2026-10-12","2026-11-22",70,"Subcon Piling"],
+    ["task","Pile Cap","Structure","2026-11-23","2027-01-03",40,"Subcon Structure"],
+    ["task","Ground Beams","Structure","2027-01-04","2027-02-14",25,"Subcon Structure"],
+    ["task","GF Hollow Core Slab","Structure","2027-01-18","2027-02-28",10,"Subcon Structure"],
+    ["task","Main Building Steel Erection","Structure","2027-02-15","2027-03-28",0,"Subcon Steel"],
+    ["task","Ductbank Works","MEP","2026-10-19","2027-02-28",30,"Subcon MEP"],
+    ["task","Exterior Wall","Architecture","2027-03-01","2027-04-11",0,"Subcon Arch"],
+    ["section","FIT OUT WORKS & COMMISSIONING","","","",0,""],
+    ["task","MEP Fit Out","MEP","2027-03-29","2027-05-23",0,"Subcon MEP"],
+    ["task","Testing & Commissioning","Commissioning","2027-05-24","2027-07-04",0,"T&C Team"],
+    ["task","QA/QC Documentation Close Out","QAQC","2027-05-24","2027-07-04",0,"QA/QC Dept"],
+    ["task","Handover to Client","Milestone","2027-07-05","2027-07-05",0,"Project Manager"]
+  ];
+  var rows = [];
+  for (var i = 0; i < sample.length; i++) {
+    rows.push({ type:sample[i][0], name:sample[i][1], category:sample[i][2],
+                start:sample[i][3], finish:sample[i][4], progress:sample[i][5], responsible:sample[i][6] });
+  }
+  categoryColorMap = {};
+  applyProjectObject({ rows: rows, colorMap: {}, links: [] });
+
+  buildView();
+  var demo = { "3":"1SS+14", "4":"3FS", "5":"4FS", "6":"5FS", "7":"6SS+14",
+               "8":"6FS", "9":"5SS+7", "10":"8FS", "11":"9FS", "12":"11FS",
+               "13":"11FS", "14":"12FF" };
+  for (var label in demo) {
+    var id = BY_LABEL[label];
+    if (id !== undefined) setPredecessorText(id, demo[label]);
+  }
+  undoStack = []; redoStack = []; refreshUndoButtons();
+
+  document.getElementById("importInfo").textContent =
+    "sample data loaded (" + LINKS.length + " dependencies)";
+  document.getElementById("editInfo").textContent = "";
+  markDirty(); renderAll();
+}
+
+
+/* =========================================================================
+   PART 17 - EXPORT TO EXCEL WITH REAL SHAPES
+   ========================================================================= */
+
+var EMU_PER_POINT = 12700;
+var ROW_HEIGHT_TASK = 22;
+var ROW_HEIGHT_SECTION = 20;
+var HEADER_ROWS = 5;
+var INFO_COLS = 6;
+var CHUNK_SIZE = 30000;
+var UNIT_COL_WIDTH = 3.6;
+var UNIT_COL_EMU = Math.round((Math.round(UNIT_COL_WIDTH * 7) + 5) * 0.75 * EMU_PER_POINT);
+
+async function exportExcel() {
+  var tasks = VIEW.filter(function (v) { return !v.isSection && v.valid; });
+  if (tasks.length === 0) { alert("There is no activity with valid dates yet."); return; }
+  document.getElementById("excelInfo").textContent = "building excel ...";
+
+  var units = UNITS;
+  var totalColumns = INFO_COLS + units.length;
+  var todayIndex = todayColumnIndex();
+
+  var workbook = new ExcelJS.Workbook();
+  workbook.creator = document.getElementById("projBy").value || "Gantt Generator";
+  var sheet = workbook.addWorksheet("Gantt Chart", {
+    views: [{ state:"frozen", xSplit: INFO_COLS, ySplit: HEADER_ROWS }],
+    pageSetup: { orientation:"landscape", fitToPage:true, fitToWidth:1, fitToHeight:0, paperSize:8 }
+  });
+
+  sheet.mergeCells(1,1,1,totalColumns);
+  sheet.getCell(1,1).value = document.getElementById("projName").value;
+  sheet.getCell(1,1).font = { name:"Calibri", size:16, bold:true, color:{argb:"FF16456B"} };
+  sheet.getCell(1,1).alignment = { horizontal:"center" };
+
+  sheet.mergeCells(2,1,2,totalColumns);
+  sheet.getCell(2,1).value = "Gantt Chart Schedule  |  Prepared by: " + document.getElementById("projBy").value +
+                             "  |  Data Date: " + (document.getElementById("projDate").value || "-") +
+                             "  |  Scale: " + document.getElementById("scale").value.toUpperCase();
+  sheet.getCell(2,1).font = { name:"Calibri", size:10, italic:true };
+  sheet.getCell(2,1).alignment = { horizontal:"center" };
+
+  var headers = ["No","Activity","Start","Finish","Days","%"];
+  for (var h = 0; h < headers.length; h++) {
+    sheet.mergeCells(4, h+1, 5, h+1);
+    var hc = sheet.getCell(4, h+1);
+    hc.value = headers[h];
+    styleHeader(hc);
+  }
+  var col = INFO_COLS + 1, g = 0;
+  while (g < units.length) {
+    var span = 1;
+    while (g + span < units.length && units[g+span].group === units[g].group) span++;
+    sheet.mergeCells(4, col, 4, col + span - 1);
+    var gc = sheet.getCell(4, col);
+    gc.value = units[g].group;
+    styleHeader(gc);
+    col += span; g += span;
+  }
+  for (var u = 0; u < units.length; u++) {
+    var lc = sheet.getCell(5, INFO_COLS + 1 + u);
+    lc.value = units[u].label;
+    styleUnitHeader(lc);
+  }
+
+  var shapes = [];
+  var excelRowById = {};
+  var rowHeights = {};     // tinggi tiap baris Excel, untuk menaruh garis ketergantungan
+  var excelRow = HEADER_ROWS + 1;
+
+  for (var t = 0; t < VIEW.length; t++) {
+    var v = VIEW[t], r = v.row;
+
+    if (v.isSection) {
+      sheet.mergeCells(excelRow, 1, excelRow, totalColumns);
+      var bandCell = sheet.getCell(excelRow, 1);
+      bandCell.value = v.label + "  " + String(r.name).toUpperCase();
+      bandCell.font = { name:"Calibri", size:11, bold:true, color:{argb:"FFFFFFFF"} };
+      bandCell.fill = { type:"pattern", pattern:"solid", fgColor:{argb:"FFC55A11"} };
+      bandCell.alignment = { horizontal:"left", vertical:"middle", indent:1 };
+      bandCell.border = thinBorder();
+      sheet.getRow(excelRow).height = ROW_HEIGHT_SECTION;
+      rowHeights[excelRow] = ROW_HEIGHT_SECTION;
+      excelRow++;
+      continue;
+    }
+    if (!v.valid) continue;
+
+    excelRowById[r.id] = excelRow;
+
+    sheet.getCell(excelRow,1).value = Number(v.label);
+    sheet.getCell(excelRow,2).value = r.name;
+    sheet.getCell(excelRow,3).value = toDisplay(v.start);
+    sheet.getCell(excelRow,4).value = toDisplay(v.finish);
+    sheet.getCell(excelRow,5).value = v.days;
+    sheet.getCell(excelRow,6).value = r.progress / 100;
+    sheet.getCell(excelRow,6).numFmt = "0%";
+
+    for (var c = 1; c <= INFO_COLS; c++) {
+      var cell = sheet.getCell(excelRow, c);
+      cell.font = { name:"Calibri", size:10 };
+      cell.alignment = { horizontal:(c===2 ? "left":"center"), vertical:"middle", indent:(c===2?1:0) };
+      cell.border = thinBorder();
+    }
+
+    var extras = [];
+    if (r.responsible) extras.push(r.responsible);
+    var pred = predecessorText(r.id);
+    if (pred) extras.push("[" + pred + "]");
+    if (extras.length) {
+      sheet.getCell(excelRow,2).value = { richText: [
+        { text: r.name, font:{ name:"Calibri", size:10, color:{argb:"FF000000"} } },
+        { text: "   " + extras.join("  "), font:{ name:"Calibri", size:8, italic:true, color:{argb:"FF808080"} } }
+      ]};
+    }
+
+    for (var w2 = 0; w2 < units.length; w2++) {
+      var tc = sheet.getCell(excelRow, INFO_COLS + 1 + w2);
+      tc.border = thinBorder();
+      if (units[w2].weekend) tc.fill = { type:"pattern", pattern:"solid", fgColor:{argb:"FFF4F5F7"} };
+      else if (w2 === todayIndex) tc.fill = { type:"pattern", pattern:"solid", fgColor:{argb:"FFFFF6DD"} };
+    }
+    sheet.getRow(excelRow).height = ROW_HEIGHT_TASK;
+    rowHeights[excelRow] = ROW_HEIGHT_TASK;
+
+    if (v.span > 0) {
+      shapes.push({
+        rowIndex: excelRow, firstCol: v.first, lastCol: v.last, colCount: v.span,
+        label: r.name, color: getColor(r.category), progress: r.progress,
+        milestone: v.milestone
+      });
+    }
+    excelRow++;
+  }
+
+  var legendRow = excelRow + 1;
+  sheet.getCell(legendRow,2).value = "LEGEND";
+  sheet.getCell(legendRow,2).font = { name:"Calibri", size:11, bold:true };
+  var cats = Object.keys(categoryColorMap);
+  for (var L = 0; L < cats.length; L++) {
+    var lr = legendRow + 1 + L;
+    sheet.getCell(lr,2).value = cats[L];
+    sheet.getCell(lr,2).font = { name:"Calibri", size:10 };
+    var sw = sheet.getCell(lr,1);
+    sw.fill = { type:"pattern", pattern:"solid", fgColor:{argb:"FF" + tint(categoryColorMap[cats[L]],0.72)} };
+    sw.border = thinBorder();
+  }
+  sheet.getCell(legendRow + 1 + cats.length, 2).value =
+    "Arrows = dependencies (FS / SS / FF / SF). Red dashed = the dates break the link.";
+  sheet.getCell(legendRow + 1 + cats.length, 2).font = { name:"Calibri", size:9, italic:true, color:{argb:"FF808080"} };
+
+  sheet.getColumn(1).width = 5;
+  sheet.getColumn(2).width = 40;
+  sheet.getColumn(3).width = 12;
+  sheet.getColumn(4).width = 12;
+  sheet.getColumn(5).width = 7;
+  sheet.getColumn(6).width = 7;
+  for (var w3 = 0; w3 < units.length; w3++) sheet.getColumn(INFO_COLS + 1 + w3).width = UNIT_COL_WIDTH;
+  sheet.getRow(4).height = 18;
+  sheet.getRow(5).height = 14;   // cukup untuk huruf 7pt satu baris
+
+  var dataSheet = workbook.addWorksheet(DATA_SHEET, { state: "hidden" });
+  var jsonText = JSON.stringify(buildProjectObject());
+  var line = 1;
+  for (var pos = 0; pos < jsonText.length; pos += CHUNK_SIZE) {
+    dataSheet.getCell(line, 1).value = jsonText.substr(pos, CHUNK_SIZE);
+    line++;
+  }
+  dataSheet.getColumn(1).width = 10;
+
+  var buffer = await workbook.xlsx.writeBuffer();
+  var zip = await JSZip.loadAsync(buffer);
+  var drawingXml = buildDrawingXml(shapes, units, todayIndex, excelRow, excelRowById, rowHeights);
+
+  var sheetPath = "xl/worksheets/sheet1.xml";
+  var relsPath  = "xl/worksheets/_rels/sheet1.xml.rels";
+
+  var ctPath = "[Content_Types].xml";
+  var ct = await zip.file(ctPath).async("string");
+  if (ct.indexOf("drawings/drawing1.xml") === -1) {
+    ct = ct.replace("</Types>",
+      '<Override PartName="/xl/drawings/drawing1.xml" ' +
+      'ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
+    zip.file(ctPath, ct);
+  }
+
+  var relXml, newRelId;
+  if (zip.file(relsPath)) {
+    relXml = await zip.file(relsPath).async("string");
+    var maxId = 0;
+    var found = relXml.match(/Id="rId(\d+)"/g) || [];
+    for (var f2 = 0; f2 < found.length; f2++) {
+      var n = Number(found[f2].replace(/\D/g, ""));
+      if (n > maxId) maxId = n;
+    }
+    newRelId = "rId" + (maxId + 1);
+    relXml = relXml.replace("</Relationships>",
+      '<Relationship Id="' + newRelId + '" ' +
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" ' +
+      'Target="../drawings/drawing1.xml"/></Relationships>');
+  } else {
+    newRelId = "rId1";
+    relXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" ' +
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" ' +
+      'Target="../drawings/drawing1.xml"/></Relationships>';
+  }
+  zip.file(relsPath, relXml);
+
+  var sheetXml = await zip.file(sheetPath).async("string");
+  var drawingTag = '<drawing r:id="' + newRelId + '"/>';
+  var insertBefore = ["<tableParts", "<extLst", "</worksheet>"];
+  for (var ib = 0; ib < insertBefore.length; ib++) {
+    var posTag = sheetXml.indexOf(insertBefore[ib]);
+    if (posTag !== -1) { sheetXml = sheetXml.slice(0, posTag) + drawingTag + sheetXml.slice(posTag); break; }
+  }
+  zip.file(sheetPath, sheetXml);
+  zip.file("xl/drawings/drawing1.xml", drawingXml);
+
+  var out = await zip.generateAsync({ type:"blob",
+    mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  saveAs(out, "Gantt_Schedule_Shapes_" + toText(new Date()) + ".xlsx");
+  document.getElementById("excelInfo").textContent =
+    shapes.length + " bars and " + LINKS.length + " dependency arrows drawn - the file can be dropped back to continue editing";
+}
+
+function styleHeader(cell) {
+  cell.font = { name:"Calibri", size:10, bold:true, color:{argb:"FFFFFFFF"} };
+  cell.fill = { type:"pattern", pattern:"solid", fgColor:{argb:"FF16456B"} };
+  cell.alignment = { horizontal:"center", vertical:"middle", wrapText:true };
+  cell.border = thinBorder();
+}
+
+// Baris label waktu ("W1", "W10", "Jan") beda perlakuan dengan header biasa.
+// Kolomnya hanya selebar 3,6 karakter (~30 px), sedangkan "W10" pada huruf
+// ukuran 10 butuh sekitar 28 px. Karena mepet, wrapText membuatnya dipatahkan
+// jadi dua baris -- itulah yang terlihat "maksa" pada hasil kemarin.
+// Jadi di sini: huruf dikecilkan, wrap DIMATIKAN, dan shrinkToFit dipasang
+// sebagai pengaman terakhir bila suatu saat ada label yang lebih panjang.
+function styleUnitHeader(cell) {
+  cell.font = { name:"Calibri", size:7, bold:true, color:{argb:"FFFFFFFF"} };
+  cell.fill = { type:"pattern", pattern:"solid", fgColor:{argb:"FF16456B"} };
+  cell.alignment = {
+    horizontal: "center", vertical: "middle",
+    wrapText: false, shrinkToFit: true
+  };
+  cell.border = thinBorder();
+}
+function thinBorder() {
+  var line = { style:"thin", color:{argb:"FFD9DDE3"} };
+  return { top:line, left:line, bottom:line, right:line };
+}
+
+
+/* =========================================================================
+   PART 18 - THE DRAWING XML (excel shapes)
+   ========================================================================= */
+
+var shapeIdCounter = 1;
+
+function makeShape(fromCol, fromColOff, fromRow, fromRowOff,
+                   toCol, toColOff, toRow, toRowOff,
+                   preset, fillHex, lineHex, text, textAlign, textColor, isTextBox, rot) {
+  shapeIdCounter++;
+
+  var fill = fillHex ? '<a:solidFill><a:srgbClr val="' + fillHex + '"/></a:solidFill>' : '<a:noFill/>';
+  var line = lineHex
+      ? '<a:ln w="9525" cap="flat"><a:solidFill><a:srgbClr val="' + lineHex + '"/></a:solidFill></a:ln>'
+      : '<a:ln><a:noFill/></a:ln>';
+
+  var paragraph = text
+    ? '<a:p><a:pPr algn="' + textAlign + '"/><a:r>' +
+        '<a:rPr lang="en-US" sz="800" b="0"><a:solidFill><a:srgbClr val="' + textColor + '"/></a:solidFill>' +
+        '<a:latin typeface="Calibri"/></a:rPr><a:t>' + escapeXml(text) + '</a:t></a:r></a:p>'
+    : '<a:p><a:endParaRPr lang="en-US" sz="800"/></a:p>';
+
+  var xfrm = '<a:xfrm' + (rot ? ' rot="' + rot + '"' : '') +
+             '><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></a:xfrm>';
+
+  // editAs="twoCell" -> kedua sudut dipatok ke sel, jadi bentuknya IKUT MELAR
+  // saat lebar kolom diubah. Dengan "oneCell" (dipakai sebelumnya) hanya sudut
+  // kiri-atas yang mengikuti, ukurannya tetap, sehingga batang dan garis
+  // langsung meleset begitu kolom digeser.
+  return '' +
+  '<xdr:twoCellAnchor editAs="twoCell">' +
+    '<xdr:from><xdr:col>' + fromCol + '</xdr:col><xdr:colOff>' + fromColOff + '</xdr:colOff>' +
+      '<xdr:row>' + fromRow + '</xdr:row><xdr:rowOff>' + fromRowOff + '</xdr:rowOff></xdr:from>' +
+    '<xdr:to><xdr:col>' + toCol + '</xdr:col><xdr:colOff>' + toColOff + '</xdr:colOff>' +
+      '<xdr:row>' + toRow + '</xdr:row><xdr:rowOff>' + toRowOff + '</xdr:rowOff></xdr:to>' +
+    '<xdr:sp macro="" textlink="">' +
+      '<xdr:nvSpPr><xdr:cNvPr id="' + shapeIdCounter + '" name="Shape ' + shapeIdCounter + '"/>' +
+        '<xdr:cNvSpPr' + (isTextBox ? ' txBox="1"' : '') + '/></xdr:nvSpPr>' +
+      '<xdr:spPr>' +
+        xfrm +
+        '<a:prstGeom prst="' + preset + '"><a:avLst/></a:prstGeom>' +
+        fill + line +
+      '</xdr:spPr>' +
+      '<xdr:txBody>' +
+        '<a:bodyPr vertOverflow="clip" horzOverflow="overflow" wrap="none" ' +
+          'lIns="27432" tIns="0" rIns="27432" bIns="0" rtlCol="0" anchor="ctr"/>' +
+        '<a:lstStyle/>' + paragraph +
+      '</xdr:txBody>' +
+    '</xdr:sp>' +
+    '<xdr:clientData/>' +
+  '</xdr:twoCellAnchor>';
+}
+
+
+var LINK_GRAY = "5A6A7A";
+var LINK_RED  = "C00000";
+var LINK_THICK = 12700;                       // tebal garis, 1 pt
+var GEOM_SPACE = 100000;                      // ruang koordinat di dalam custGeom
+
+/* ---------------------------------------------------------------------------
+   Peta tinggi baris.
+   Posisi tegak garis ketergantungan tidak bisa dihitung dari tinggi baris di
+   layar, karena di Excel baris pita kelompok lebih pendek daripada baris
+   kegiatan. Jadi tinggi sesungguhnya dijumlahkan dulu, lalu semua posisi
+   dinyatakan dalam EMU dari sisi atas baris data pertama.
+--------------------------------------------------------------------------- */
+function buildRowMap(firstRow, lastRow, rowHeights) {
+  var tops = [], heights = [], acc = 0;
+  for (var r = firstRow; r <= lastRow; r++) {
+    var pt = rowHeights[r] || ROW_HEIGHT_TASK;
+    var h = Math.round(pt * EMU_PER_POINT);
+    tops.push(acc);
+    heights.push(h);
+    acc += h;
+  }
+  return { first: firstRow, tops: tops, heights: heights, total: acc };
+}
+
+function rowIndexAt(map, yEmu) {
+  var i = 0;
+  while (i < map.tops.length - 1 && yEmu >= map.tops[i] + map.heights[i]) i++;
+  return i;
+}
+function rowCenterEmu(map, excelRow) {
+  var i = excelRow - map.first;
+  if (i < 0 || i >= map.tops.length) return 0;
+  return map.tops[i] + map.heights[i] / 2;
+}
+function rowTopEmu(map, excelRow) {
+  var i = excelRow - map.first;
+  if (i < 0) i = 0;
+  if (i >= map.tops.length) return map.total;
+  return map.tops[i];
+}
+
+/* ---------------------------------------------------------------------------
+   Satu ketergantungan = SATU bentuk garis.
+
+   Sebelumnya jalur siku disusun dari empat kotak tipis ditambah satu segitiga
+   sebagai mata panah. Susunan itu rapuh: tiap kotak dipatok sendiri-sendiri,
+   jadi begitu lebar kolom diubah, potongan-potongannya bergeser sendiri dan
+   sambungannya putus.
+
+   Sekarang seluruh jalur digambar sebagai satu polyline lewat custGeom, dan
+   mata panahnya memakai tailEnd milik garis itu sendiri -- bukan bentuk
+   terpisah. Kotak pembungkusnya dipatok tepat ke batas kolom dan baris, jadi
+   saat kolom dilebarkan seluruh jalur ikut melar utuh tanpa terputus.
+--------------------------------------------------------------------------- */
+function makeConnector(points, colorHex, dashed) {
+  shapeIdCounter++;
+
+  var xs = [], ys = [], i;
+  for (i = 0; i < points.length; i++) { xs.push(points[i][0]); ys.push(points[i][1]); }
+
+  var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+  var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+
+  // Patok ke batas kolom. Kalau dibiarkan berhenti di tengah kolom, sisi kotak
+  // pembungkus tidak ikut melar sebanding dan ujung garis meleset dari batang.
+  var colA = Math.floor(minX / UNIT_COL_EMU);
+  var colB = Math.ceil(maxX / UNIT_COL_EMU);
+
+  // Kegiatan yang mulai di kolom paling kiri punya siku yang menjulur ke kiri
+  // sejauh STUB, sehingga hitungannya bisa jatuh ke kolom minus. Kalau
+  // dibiarkan, garisnya menyeberang ke kolom keterangan di sebelah kiri.
+  if (colA < 0) colA = 0;
+  if (colB <= colA) colB = colA + 1;
+  var boxX0 = colA * UNIT_COL_EMU;
+  var boxX1 = colB * UNIT_COL_EMU;
+
+  // Patok ke batas baris dengan cara yang sama.
+  var rowA = points.rowTop;
+  var rowB = points.rowBottom;
+  var boxY0 = points.boxY0;
+  var boxY1 = points.boxY1;
+
+  var w = boxX1 - boxX0;
+  var h = boxY1 - boxY0;
+  if (w <= 0) w = 1;
+  if (h <= 0) h = 1;
+
+  var d = "";
+  for (i = 0; i < points.length; i++) {
+    var px = Math.round((points[i][0] - boxX0) / w * GEOM_SPACE);
+    var py = Math.round((points[i][1] - boxY0) / h * GEOM_SPACE);
+    if (px < 0) px = 0; if (px > GEOM_SPACE) px = GEOM_SPACE;
+    if (py < 0) py = 0; if (py > GEOM_SPACE) py = GEOM_SPACE;
+    d += (i === 0)
+       ? '<a:moveTo><a:pt x="' + px + '" y="' + py + '"/></a:moveTo>'
+       : '<a:lnTo><a:pt x="' + px + '" y="' + py + '"/></a:lnTo>';
+  }
+
+  var dash = dashed ? '<a:prstDash val="dash"/>' : '';
+
+  return '' +
+  '<xdr:twoCellAnchor editAs="twoCell">' +
+    '<xdr:from><xdr:col>' + (INFO_COLS + colA) + '</xdr:col><xdr:colOff>0</xdr:colOff>' +
+      '<xdr:row>' + rowA + '</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>' +
+    '<xdr:to><xdr:col>' + (INFO_COLS + colB) + '</xdr:col><xdr:colOff>0</xdr:colOff>' +
+      '<xdr:row>' + rowB + '</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>' +
+    '<xdr:sp macro="" textlink="">' +
+      '<xdr:nvSpPr>' +
+        '<xdr:cNvPr id="' + shapeIdCounter + '" name="Link ' + shapeIdCounter + '"/>' +
+        '<xdr:cNvSpPr/>' +
+      '</xdr:nvSpPr>' +
+      '<xdr:spPr>' +
+        '<a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></a:xfrm>' +
+        '<a:custGeom>' +
+          '<a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/>' +
+          '<a:pathLst>' +
+            '<a:path w="' + GEOM_SPACE + '" h="' + GEOM_SPACE + '" fill="none">' + d + '</a:path>' +
+          '</a:pathLst>' +
+        '</a:custGeom>' +
+        '<a:noFill/>' +
+        '<a:ln w="' + LINK_THICK + '" cap="flat">' +
+          '<a:solidFill><a:srgbClr val="' + colorHex + '"/></a:solidFill>' +
+          dash +
+          '<a:round/>' +
+          '<a:tailEnd type="triangle" w="med" len="med"/>' +
+        '</a:ln>' +
+      '</xdr:spPr>' +
+      '<xdr:txBody>' +
+        '<a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="en-US"/></a:p>' +
+      '</xdr:txBody>' +
+    '</xdr:sp>' +
+    '<xdr:clientData/>' +
+  '</xdr:twoCellAnchor>';
+}
+
+function buildLinkShapes(excelRowById, rowHeights, lastRowUsed) {
+  var body = "";
+  var map = buildRowMap(HEADER_ROWS + 1, lastRowUsed - 1, rowHeights);
+
+  for (var i = 0; i < LINKS.length; i++) {
+    var link = LINKS[i];
+    var er1 = excelRowById[link.fromId], er2 = excelRowById[link.toId];
+    if (er1 === undefined || er2 === undefined) continue;
+
+    var geo = linkGeometry(link);
+    if (!geo) continue;
+
+    // Sumbu X dipindah dari piksel layar ke EMU kolom Excel supaya sebanding
+    // dengan sumbu Y yang memang sudah dalam EMU.
+    var p = geo.points;
+    var x1 = p[0][0] / UNIT_PX * UNIT_COL_EMU;
+    var ex = p[1][0] / UNIT_PX * UNIT_COL_EMU;
+    var tx = p[3][0] / UNIT_PX * UNIT_COL_EMU;
+    var x2 = p[5][0] / UNIT_PX * UNIT_COL_EMU;
+
+    var y1 = rowCenterEmu(map, er1);
+    var y2 = rowCenterEmu(map, er2);
+
+    // Ruas mendatar ditaruh di batas baris tujuan, sama seperti di layar:
+    // lewat sisi atas bila tujuannya di bawah, sisi bawah bila di atas.
+    var ymid;
+    if (er2 > er1)      ymid = rowTopEmu(map, er2);
+    else if (er2 < er1) ymid = rowTopEmu(map, er2) + (map.heights[er2 - map.first] || 0);
+    else                ymid = y1;
+
+    var pts = [[x1, y1], [ex, y1], [ex, ymid], [tx, ymid], [tx, y2], [x2, y2]];
+
+    // Kotak pembungkus dipatok ke batas baris teratas dan terbawah yang dilewati
+    var ysAll = [y1, y2, ymid];
+    var iTop = rowIndexAt(map, Math.min.apply(null, ysAll));
+    var iBot = rowIndexAt(map, Math.max.apply(null, ysAll));
+    if (iBot < iTop) { var t = iTop; iTop = iBot; iBot = t; }
+
+    pts.boxY0 = map.tops[iTop];
+    pts.boxY1 = map.tops[iBot] + map.heights[iBot];
+    pts.rowTop    = (map.first + iTop) - 1;        // xml memakai indeks mulai 0
+    pts.rowBottom = (map.first + iBot + 1) - 1;    // sisi bawah = sisi atas baris berikutnya
+
+    body += makeConnector(pts, linkIsViolated(link) ? LINK_RED : LINK_GRAY,
+                          linkIsViolated(link));
+  }
+  return body;
+}
+
+function buildDrawingXml(shapes, units, todayIndex, lastRowUsed, excelRowById, rowHeights) {
+  shapeIdCounter = 1;
+  var body = "";
+
+  var rowTopOff = Math.round(ROW_HEIGHT_TASK * 0.20 * EMU_PER_POINT);
+  var rowBotOff = Math.round(ROW_HEIGHT_TASK * 0.80 * EMU_PER_POINT);
+
+  for (var i = 0; i < shapes.length; i++) {
+    var s = shapes[i];
+    var drawRow = s.rowIndex - 1;
+    var startCol = INFO_COLS + s.firstCol;
+    var endCol   = INFO_COLS + s.lastCol + 1;
+    var bodyColor = tint(s.color, 0.72);
+
+    if (s.milestone) {
+      var mid = Math.round(ROW_HEIGHT_TASK * 0.5 * EMU_PER_POINT);
+      var half = Math.round(7 * EMU_PER_POINT);
+      body += makeShape(startCol, 0, drawRow, mid - half,
+                        startCol + 1, 0, drawRow, mid + half,
+                        "diamond", "C00000", "7B0000", "", "ctr", "000000", false, 0);
+      body += makeShape(endCol, Math.round(2*EMU_PER_POINT), drawRow, rowTopOff,
+                        Math.min(endCol + 12, INFO_COLS + units.length), 0, drawRow, rowBotOff,
+                        "rect", null, null, s.label, "l", "222222", true, 0);
+      continue;
+    }
+
+    var capacityChars = s.colCount * 3.6 * 1.15;
+    var fitInside = (String(s.label).length <= capacityChars);
+
+    body += makeShape(startCol, 0, drawRow, rowTopOff,
+                      endCol, 0, drawRow, rowBotOff,
+                      "homePlate", bodyColor, s.color, "", "ctr", "000000", false, 0);
+
+    if (s.progress > 0) {
+      var doneCols = Math.max(1, Math.round(s.colCount * s.progress / 100));
+      var doneEnd = startCol + doneCols;
+      if (doneEnd > endCol) doneEnd = endCol;
+      body += makeShape(startCol, 0, drawRow, rowTopOff,
+                        doneEnd, 0, drawRow, rowBotOff,
+                        (doneCols >= s.colCount ? "homePlate" : "rect"),
+                        s.color, s.color, "", "ctr", "000000", false, 0);
+    }
+
+    if (fitInside) {
+      body += makeShape(startCol, 0, drawRow, rowTopOff,
+                        endCol, 0, drawRow, rowBotOff,
+                        "rect", null, null, s.label, "ctr", "000000", true, 0);
+    } else {
+      body += makeShape(endCol, Math.round(2*EMU_PER_POINT), drawRow, rowTopOff,
+                        Math.min(endCol + 12, INFO_COLS + units.length), 0, drawRow, rowBotOff,
+                        "rect", null, null, s.label, "l", "222222", true, 0);
+    }
+  }
+
+  body += buildLinkShapes(excelRowById || {}, rowHeights || {}, lastRowUsed);
+
+  if (todayIndex >= 0) {
+    var colT = INFO_COLS + todayIndex;
+    body += makeShape(colT, 0, HEADER_ROWS, 0,
+                      colT, Math.round(1.2 * EMU_PER_POINT), lastRowUsed - 1, 0,
+                      "rect", "E08A00", null, "", "ctr", "000000", false, 0);
+  }
+
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" ' +
+    'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' + body + '</xdr:wsDr>';
+}
+
+
+/* =========================================================================
+   PART 19 - START UP
+   ========================================================================= */
+
+document.getElementById("projDate").value = toText(new Date());
+
+(function startUp() {
+  var savedTheme = "category";
+  try { savedTheme = localStorage.getItem("jkt09.gantt.visual-theme") || "category"; } catch (err) { /* use default theme */ }
+  setGanttTheme(savedTheme, false);
+  ROWS.push(newRow("section"));
+  for (var i = 0; i < 3; i++) ROWS.push(newRow("task"));
+  renderAll();
+  scrollToTop();
+
+  var saved = localStorage.getItem(AUTOSAVE_KEY);
+  if (saved) {
+    try {
+      var when = (JSON.parse(saved).savedAt || "").replace("T"," ").slice(0,16);
+      document.getElementById("saveInfo").innerHTML =
+        '<span class="warnMsg">A previous session from ' + when +
+        ' is available &mdash; click "Restore Last Session".</span>';
+    } catch (err) { /* ignore */ }
+  }
+})();
+<\/script>
+
+
+<button id="joHelpBtn" onclick="parent.postMessage({jo:'help',ch:'t7'},'*')" title="Buka panduan pemakaian bergambar" style="position:fixed;right:20px;bottom:20px;z-index:9999;background:#f5c518;color:#2a2000;border:none;border-radius:22px;padding:10px 18px;font:800 13px 'Segoe UI',Arial,sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.28)">&#128216; Cara Pakai</button>
+</body>
+</html>

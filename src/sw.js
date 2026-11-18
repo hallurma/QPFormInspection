@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jkt09-pwa-v1';
+const CACHE_NAME = 'jkt09-pwa-v2';
 const APP_SHELL = new URL('./', self.registration.scope).href;
 const PRECACHE_URLS = [
   './',
@@ -6,8 +6,21 @@ const PRECACHE_URLS = [
   './assets/pwa-icon-180.png',
   './assets/pwa-icon-192.png',
   './assets/pwa-icon-512.png',
+  './assets/jo-logo.png',
   './assets/stamp-obayashi.png',
-  './assets/stamp-jaya-obayashi.png'
+  './assets/stamp-jaya-obayashi.png',
+  './forms/b.html',
+  './forms/c.html',
+  './forms/d.html',
+  './forms/e.html',
+  './forms/g.html',
+  './forms/h.html',
+  './forms/classic/qp00602b.html',
+  './forms/classic/qp00605.html',
+  './assets/libs/exceljs.js',
+  './assets/libs/xlsx.js',
+  './assets/libs/jszip.js',
+  './assets/libs/file-saver.js'
 ];
 
 self.addEventListener('install', event => {
@@ -56,7 +69,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (/\.(?:webmanifest|png|svg|css|js)$/i.test(url.pathname)) {
+  if (/\.(?:webmanifest|png|svg|css|js|html|json|xlsx)$/i.test(url.pathname)) {
     event.respondWith((async () => {
       const cached = await caches.match(request);
       if (cached) return cached;
