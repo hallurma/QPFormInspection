@@ -23,18 +23,62 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
 
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build and publish Windows installers
-        uses: tauri-apps/tauri-action@v0
+      - name: Build Windows installers
+        run: npm run tauri build -- --target x86_64-pc-windows-msvc
+
+      - name: Package installers as ZIP files
+        shell: pwsh
+        run: |
+          $artifactDir = Join-Path $PWD 'release-artifacts'
+          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+
+          $nsisInstaller = Get-ChildItem -Path 'src-tauri/target' -Recurse -File -Filter '*-setup.exe' |
+            Where-Object { $_.FullName -match '\\bundle\\nsis\\' } |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
+          $msiInstaller = Get-ChildItem -Path 'src-tauri/target' -Recurse -File -Filter '*.msi' |
+            Where-Object { $_.FullName -match '\\bundle\\msi\\' } |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
+          if (-not $nsisInstaller) {
+            throw 'NSIS .exe installer tidak ditemukan.'
+          }
+
+          if (-not $msiInstaller) {
+            throw 'MSI installer tidak ditemukan.'
+          }
+
+          $version = '${{ github.ref_name }}'
+          Compress-Archive -LiteralPath $nsisInstaller.FullName -DestinationPath (Join-Path $artifactDir "QP-Form-Generator-$version-Windows-x64-NSIS.zip") -Force
+          Compress-Archive -LiteralPath $msiInstaller.FullName -DestinationPath (Join-Path $artifactDir "QP-Form-Generator-$version-Windows-x64-MSI.zip") -Force
+
+          Get-ChildItem -Path $artifactDir -File | Format-Table Name, Length
+
+      - name: Publish ZIP installers
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'QP Form Generator v__VERSION__'
-          releaseBody: 'Installer Windows untuk Jaya Obayashi QC Form Generator. Unduh file .exe atau .msi di bawah ini.'
-          releaseDraft: false
+          tag_name: ${{ github.ref_name }}
+          name: 'QP Form Generator ${{ github.ref_name }}'
+          body: |
+            Installer Windows untuk Jaya Obayashi QC Form Generator.
+
+            Unduh salah satu ZIP berikut, ekstrak terlebih dahulu, lalu jalankan installer di dalamnya:
+            - ZIP NSIS berisi installer `.exe`
+            - ZIP MSI berisi installer `.msi`
+
+            Catatan: SmartScreen masih dapat menampilkan peringatan saat installer dijalankan karena code signing belum dikonfigurasi.
+          files: |
+            release-artifacts/*.zip
+          fail_on_unmatched_files: true
+          draft: false
           prerelease: false
-          args: --target x86_64-pc-windows-msvc
