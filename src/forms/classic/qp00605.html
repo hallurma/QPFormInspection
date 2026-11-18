@@ -127,7 +127,7 @@
 </style></head><body>
 <div class="bar">
   <h1>Paket Piling <span>— 2 form dalam 1 berkas</span></h1>
-  <nav class="jump"><a href="#hal1">1 · Penerimaan Material</a><a href="#hal2">2 · Laporan Kerja Piling</a></nav>
+  <nav class="jump"><a href="#hal1" onclick="event.preventDefault();document.getElementById('hal1').scrollIntoView({behavior:'smooth',block:'start'});return false;">1 · Penerimaan Material</a><a href="#hal2" onclick="event.preventDefault();document.getElementById('hal2').scrollIntoView({behavior:'smooth',block:'start'});return false;">2 · Laporan Kerja Piling</a></nav>
   <span class="sp"></span><span id="msg"></span>
   <button type="button" onclick="saveAll()">💾 Simpan Draft</button>
   <button type="button" onclick="document.getElementById('draftIn').click()">📂 Muat Draft</button>

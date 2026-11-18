@@ -97,6 +97,70 @@
   #joLang-B { margin-left: 8px; }
   html[lang="ja"] body { font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', 'Hiragino Sans', Arial, sans-serif; }
 
+  /* ===== WALLPAPER HALAMAN UTAMA ===== */
+  .jo-wallpaper {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: linear-gradient(rgba(15,23,42,.12), rgba(15,23,42,.12)),
+      url('./assets/wallpaper-default.jpg') center / cover no-repeat;
+    opacity: 0; transform: scale(1.025);
+    transition: opacity .55s ease, transform .8s ease;
+  }
+  .jo-wallpaper.on { opacity: 1; transform: scale(1); }
+  .jo-launch, .jo-bar, .jo-stage { position: relative; }
+  .jo-launch { z-index: 1; }
+  .jo-wall-control {
+    position: absolute; top: 13px; right: 120px; z-index: 35;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .jo-wall-trigger, .jo-wall-settings {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 28px; border: 1px solid #cbd5e1; background: rgba(255,255,255,.94);
+    color: #334155; box-shadow: 0 2px 8px rgba(0,0,0,.08); cursor: pointer;
+  }
+  .jo-wall-trigger { gap: 5px; border-radius: 6px; padding: 3px 6px; }
+  .jo-wall-settings { width: 28px; border-radius: 6px; font-size: 14px; }
+  .jo-wall-trigger:hover, .jo-wall-settings:hover { background: #fff; border-color: #94a3b8; }
+  .jo-wall-icon { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+  .jo-wall-icon svg { width: 14px; height: 14px; display: block; stroke: #475569; }
+  .jo-wall-switch { position: relative; width: 29px; height: 16px; display: inline-block; }
+  .jo-wall-switch input {
+    position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%;
+    margin: 0; cursor: pointer; z-index: 2;
+  }
+  .jo-wall-track {
+    position: absolute; inset: 0; border-radius: 99px; background: #cbd5e1;
+    transition: background .25s ease; cursor: pointer;
+  }
+  .jo-wall-track::after {
+    content: ''; position: absolute; width: 12px; height: 12px; left: 2px; top: 2px;
+    border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+    transition: transform .25s ease;
+  }
+  .jo-wall-switch input:checked + .jo-wall-track { background: #2563eb; }
+  .jo-wall-switch input:checked + .jo-wall-track::after { transform: translateX(13px); }
+  .jo-wall-state { min-width: 19px; font-size: 9px; font-weight: 800; color: #64748b; }
+  .jo-wall-switch input:checked ~ .jo-wall-state { color: #2563eb; }
+  .jo-wall-panel {
+    position: absolute; top: 34px; right: 0; width: 218px; padding: 10px;
+    background: rgba(255,255,255,.98); border: 1px solid #dbe3ec; border-radius: 9px;
+    box-shadow: 0 10px 28px rgba(15,23,42,.22); color: #334155;
+  }
+  .jo-wall-panel[hidden] { display: none; }
+  .jo-wall-panel h3 { margin: 0 0 7px; font-size: 12px; color: #0f172a; }
+  .jo-wall-panel p { margin: 0 0 8px; font-size: 10px; line-height: 1.45; color: #64748b; }
+  .jo-wall-file, .jo-wall-action {
+    display: block; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px;
+    padding: 7px 8px; background: #f8fafc; color: #1d4ed8; cursor: pointer;
+    font: 600 10.5px 'Segoe UI', Arial, sans-serif; text-align: left;
+  }
+  .jo-wall-file:hover, .jo-wall-action:hover { background: #eff6ff; }
+  .jo-wall-file input { display: none; }
+  .jo-wall-action { margin-top: 6px; color: #475569; }
+  .jo-wall-action[hidden] { display: none; }
+  @media (max-width: 700px) {
+    .jo-wall-control { top: max(56px, calc(env(safe-area-inset-top) + 8px)); right: 108px; }
+  }
+
   .jo-launch {
     position: relative;
     flex: 1; display: flex; flex-direction: column; align-items: center;
@@ -428,6 +492,7 @@
 
 <img id="joStampObayashiLogo" src="assets/stamp-obayashi.png" alt="" hidden>
 <img id="joStampJayaLogo" src="assets/stamp-jaya-obayashi.png" alt="" hidden>
+<div class="jo-wallpaper" id="joWallpaper" aria-hidden="true"></div>
 
 <!-- ===== TOP BAR ===== -->
 <div class="jo-bar" id="joBar">
@@ -475,6 +540,33 @@
 <!-- ===== HALAMAN PILIH FORM ===== -->
 <div class="jo-launch" id="joLaunch">
   <div class="jo-lang" id="joLang-L" data-noi18n><button type="button" class="jo-lang-btn" onclick="joLangToggle(this)" title="Language / Bahasa / 言語"><span class="jo-lang-cur"></span><span class="jo-lang-code"></span><span class="jo-lang-car">&#9662;</span></button><div class="jo-lang-menu"><button type="button" class="jo-lang-opt" data-lang="id" onclick="joSetLang('id')"><svg class="jo-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="10" fill="#d71920"/><rect y="10" width="30" height="10" fill="#fff"/><rect width="30" height="20" fill="none" stroke="#cbd5e1" stroke-width="1"/></svg><span>Bahasa Indonesia</span></button><button type="button" class="jo-lang-opt" data-lang="en" onclick="joSetLang('en')"><svg class="jo-flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukcLen"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><rect width="60" height="30" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ukcLen)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg><span>English</span></button><button type="button" class="jo-lang-opt" data-lang="ja" onclick="joSetLang('ja')"><svg class="jo-flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#fff" stroke="#cbd5e1" stroke-width="1"/><circle cx="15" cy="10" r="6" fill="#bc002d"/></svg><span>日本語</span></button></div></div>
+  <div class="jo-wall-control" id="joWall-L" data-noi18n>
+    <div class="jo-wall-trigger" id="joWallTrigger" aria-label="Wallpaper" title="Nyalakan atau matikan wallpaper">
+      <span class="jo-wall-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1.25" y="1.25" width="13.5" height="13.5" rx="1.5" stroke-width="1.3"/>
+          <circle cx="5" cy="5" r="1.15" stroke-width="1.1"/>
+          <path d="M2.8 12.1 6.1 8.8l2.15 2.15 1.35-1.35 3.6 3.6" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <label class="jo-wall-switch" id="joWallSwitchLabel" title="Nyalakan atau matikan wallpaper">
+        <input type="checkbox" id="joWallpaperToggle" onchange="joWallSet(this.checked)">
+        <span class="jo-wall-track" aria-hidden="true"></span>
+      </label>
+      <span class="jo-wall-state" id="joWallState">OFF</span>
+    </div>
+    <button class="jo-wall-settings" id="joWallSettings" type="button" onclick="joWallTogglePanel()" aria-label="Atur custom wallpaper" title="Atur custom wallpaper">&#9881;</button>
+    <div class="jo-wall-panel" id="joWallPanel" hidden>
+      <h3 id="joWallTitle">Wallpaper halaman utama</h3>
+      <p id="joWallDescription">Gunakan foto bawaan atau pilih gambar custom dari perangkat ini.</p>
+      <label class="jo-wall-file" id="joWallFileLabel">
+        <input type="file" id="joWallpaperFile" accept="image/*" onchange="joWallChoose(this)">
+        <span id="joWallFileText">&#128444; Pilih wallpaper custom</span>
+      </label>
+      <button class="jo-wall-action" id="joWallDefault" type="button" onclick="joWallUseDefault()">Gunakan wallpaper bawaan</button>
+      <button class="jo-wall-action" id="joWallClear" type="button" onclick="joWallClearCustom()" hidden>Hapus wallpaper custom</button>
+    </div>
+  </div>
   <div class="jo-launch-head">
     <img id="joLogo" alt="PT. Jaya Obayashi">
     <h1>QC Form Generator</h1>
@@ -1902,9 +1994,11 @@
         o.classList.toggle('on', o.getAttribute('data-lang') === joLang);
       });
     });
+    if (typeof joWallPaint === 'function') joWallPaint();
   }
   function joLangToggle(btn) {
     var box = btn.parentNode, buka = !box.classList.contains('open');
+    joWallClosePanel();
     document.querySelectorAll('.jo-lang.open').forEach(function (b) { b.classList.remove('open'); });
     if (buka) box.classList.add('open');
   }
@@ -1926,6 +2020,8 @@
   document.addEventListener('click', function (e) {
     if (!e.target.closest || !e.target.closest('.jo-lang'))
       document.querySelectorAll('.jo-lang.open').forEach(function (b) { b.classList.remove('open'); });
+    if (!e.target.closest || !e.target.closest('.jo-wall-control'))
+      joWallClosePanel();
   });
   joLangPaint();
 </script>
@@ -2097,6 +2193,48 @@
     return joClassicCache[key];
   }
 
+  // Wallpaper shell diteruskan ke dokumen form yang berjalan di iframe.
+  // Bridge ini juga meneruskan pesan ke iframe Classic di dalam form New.
+  function joWallpaperBridge(classicMode) {
+    // Classic worksheets contain transparent regions by design. Add opaque
+    // reading surfaces only there; never override module text colors.
+    var classicBackdropCss = classicMode ?
+      'html.jo-wallpaper-active .xpage{background:#fff!important;box-shadow:0 2px 14px rgba(15,23,42,.18)!important}' +
+      'html.jo-wallpaper-active .pg,html.jo-wallpaper-active #pages{background:#fff!important}' +
+      'html.jo-wallpaper-active .addrow{background:#fff!important}' +
+      '.bar{position:relative!important}' +
+      '.pg{scroll-margin-top:8px!important}' +
+      'html.jo-wallpaper-active .hint,html.jo-wallpaper-active .phead,html.jo-wallpaper-active .pgbar{background:rgba(255,255,255,.97)!important;border-radius:6px;padding:7px 12px;box-shadow:0 1px 8px rgba(15,23,42,.16);text-shadow:none!important}' +
+      '' : '';
+    return '<style id="joParentWallpaperStyle">' +
+      // Wallpaper hanya dirender oleh shell utama. Dokumen iframe transparan
+      // saat aktif agar satu gambar tidak dipasang ulang per viewport iframe.
+      'html.jo-wallpaper-active,html.jo-wallpaper-active body{background-color:transparent!important;background-image:none!important}' +
+      classicBackdropCss +
+      '</style>' +
+      '<scr' + 'ipt>(function(){' +
+      'function apply(data){if(!data||data.type!=="jo-wallpaper")return;' +
+        'var active=!!data.enabled;' +
+        'document.documentElement.classList.toggle("jo-wallpaper-active",active);' +
+      '}' +
+      'function relay(data){apply(data);' +
+        'var frames=document.querySelectorAll("iframe");' +
+        'for(var i=0;i<frames.length;i++){try{frames[i].contentWindow.postMessage(data,"*");}catch(e){}}' +
+      '}' +
+      'window.addEventListener("message",function(e){var data=e.data||{};' +
+        'if(data.type==="jo-wallpaper")relay(data);' +
+        'else if(data.type==="jo-wallpaper-ready"){try{window.parent.postMessage(data,"*");}catch(e){}}' +
+      '});' +
+      'try{window.parent.postMessage({type:"jo-wallpaper-ready"},"*");}catch(e){}' +
+      '})();</scr' + 'ipt>';
+  }
+  function joInjectWallpaperBridge(html, classicMode) {
+    var bodyAt = html.search(/<body[\s>]/i);
+    var headAt = bodyAt > -1 ? html.lastIndexOf('</head>', bodyAt) : html.indexOf('</head>');
+    if (headAt > -1) html = html.slice(0, headAt) + joWallpaperBridge(!!classicMode) + html.slice(headAt);
+    return html;
+  }
+
   window.addEventListener('message', function (event) {
     if (event.data && event.data.type === 'jo-classic-need') {
       var kc = String(event.data.key || '');
@@ -2131,6 +2269,7 @@
             '<scr' + 'ipt>' + engineClassic.textContent + closeScript;
           htmlc = htmlc.slice(0, headClassic) + i18nClassic + htmlc.slice(headClassic);
         }
+        htmlc = joInjectWallpaperBridge(htmlc, true);
         source.postMessage({ type: 'jo-classic-html', key: kc, html: htmlc }, '*');
         }).catch(function (err) {
           console.error('Gagal memuat template Classic ' + kc + ':', err);
@@ -2140,7 +2279,9 @@
     }
     var frame = joActive && joFrames[joActive];
     if (!frame || event.source !== frame.contentWindow || !event.data) return;
-    if (event.data.type === 'jo-overlay' && typeof event.data.active === 'boolean') {
+    if (event.data.type === 'jo-wallpaper-ready') {
+      joWallSyncFrame(frame);
+    } else if (event.data.type === 'jo-overlay' && typeof event.data.active === 'boolean') {
       document.documentElement.classList.toggle('jo-overlay-open', event.data.active);
     } else if (event.data.type === 'jo-home') {
       joHome();
@@ -2252,6 +2393,9 @@
     // Tambahkan skrip hanya tepat sebelum tag penutup dokumen. Pencarian
     // lastIndexOf('</body>') bisa cocok dengan teks HTML di dalam kode/library.
     if (bodyScripts) payload = payload.replace(/<\/body>(\s*<\/html>\s*)$/i, bodyScripts + '</body>$1');
+    // Mode New tetap memakai wallpaper tanpa mengubah warna teks atau style
+    // isi modul; alas baca tambahan hanya disisipkan pada template Classic.
+    payload = joInjectWallpaperBridge(payload, false);
     return payload;
       });
   }
@@ -2332,6 +2476,7 @@
       f.addEventListener('load', function () {
         lo.classList.remove('show');
         joSyncLayoutMode(code);
+        joWallSyncFrame(f);
         joFocus(code);
       });
       // Template form diambil hanya ketika form dibuka, lalu dipasang sebagai
@@ -2381,6 +2526,208 @@
     document.title = 'PT. Jaya Obayashi - QC Form Generator';
   }
 
+  // Wallpaper shell: pilihan disimpan lokal agar PWA dan Tauri mengingatnya.
+  var JO_WALL_ENABLED = 'jo-wallpaper-enabled';
+  var JO_WALL_CUSTOM = 'jo-wallpaper-custom';
+  var joWallCustomUrl = '';
+  var joWallTheme = 'dark';
+  var joWallThemeRequest = 0;
+  function joWallPaint() {
+    var copy = {
+      id: {
+        wall: 'Wallpaper',
+        toggle: 'Nyalakan atau matikan wallpaper',
+        settings: 'Atur custom wallpaper',
+        title: 'Wallpaper halaman utama',
+        description: 'Gunakan foto bawaan atau pilih gambar custom dari perangkat ini.',
+        choose: 'Pilih wallpaper custom',
+        default: 'Gunakan wallpaper bawaan',
+        clear: 'Hapus wallpaper custom'
+      },
+      en: {
+        wall: 'Wallpaper',
+        toggle: 'Turn wallpaper on or off',
+        settings: 'Customize wallpaper',
+        title: 'Home page wallpaper',
+        description: 'Use the built-in image or choose a custom image from this device.',
+        choose: 'Choose custom wallpaper',
+        default: 'Use default wallpaper',
+        clear: 'Remove custom wallpaper'
+      },
+      ja: {
+        wall: '壁紙',
+        toggle: '壁紙をオン／オフ',
+        settings: 'カスタム壁紙を設定',
+        title: 'ホーム画面の壁紙',
+        description: '内蔵画像を使うか、この端末からカスタム画像を選択してください。',
+        choose: 'カスタム壁紙を選択',
+        default: 'デフォルトの壁紙を使う',
+        clear: 'カスタム壁紙を削除'
+      }
+    }[joLang] || null;
+    if (!copy) return;
+    var trigger = document.getElementById('joWallTrigger');
+    var switchLabel = document.getElementById('joWallSwitchLabel');
+    var settings = document.getElementById('joWallSettings');
+    var title = document.getElementById('joWallTitle');
+    var description = document.getElementById('joWallDescription');
+    var fileText = document.getElementById('joWallFileText');
+    var defaultButton = document.getElementById('joWallDefault');
+    var clearButton = document.getElementById('joWallClear');
+    if (trigger) { trigger.setAttribute('aria-label', copy.wall); trigger.title = copy.toggle; }
+    if (switchLabel) switchLabel.title = copy.toggle;
+    if (settings) { settings.setAttribute('aria-label', copy.settings); settings.title = copy.settings; }
+    if (title) title.textContent = copy.title;
+    if (description) description.textContent = copy.description;
+    if (fileText) fileText.textContent = '🖼 ' + copy.choose;
+    if (defaultButton) defaultButton.textContent = copy.default;
+    if (clearButton) clearButton.textContent = copy.clear;
+  }
+  function joWallRead(key) {
+    try { return localStorage.getItem(key) || ''; } catch (e) { return ''; }
+  }
+  function joWallWrite(key, value) {
+    try { if (value) localStorage.setItem(key, value); else localStorage.removeItem(key); } catch (e) {}
+  }
+  function joWallSetTheme(theme) {
+    joWallTheme = theme === 'light' ? 'light' : 'dark';
+    var active = !!document.getElementById('joWallpaperToggle') && document.getElementById('joWallpaperToggle').checked;
+    document.documentElement.classList.toggle('jo-wallpaper-light', active && joWallTheme === 'light');
+    document.documentElement.classList.toggle('jo-wallpaper-dark', active && joWallTheme !== 'light');
+    joWallSyncFrames();
+  }
+  function joWallDetectTheme(url) {
+    return new Promise(function (resolve) {
+      var image = new Image();
+      var finished = false;
+      function finish(theme) {
+        if (finished) return;
+        finished = true;
+        resolve(theme);
+      }
+      image.onload = function () {
+        try {
+          var size = 64;
+          var width = image.naturalWidth || image.width || size;
+          var height = image.naturalHeight || image.height || size;
+          var scale = Math.min(1, size / Math.max(width, height));
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(width * scale));
+          canvas.height = Math.max(1, Math.round(height * scale));
+          var context = canvas.getContext('2d', { willReadFrequently: true });
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          var pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+          var luminance = 0;
+          var weight = 0;
+          for (var i = 0; i < pixels.length; i += 16) {
+            var alpha = pixels[i + 3] / 255;
+            if (!alpha) continue;
+            var r = pixels[i] / 255;
+            var g = pixels[i + 1] / 255;
+            var b = pixels[i + 2] / 255;
+            luminance += (0.2126 * r + 0.7152 * g + 0.0722 * b) * alpha;
+            weight += alpha;
+          }
+          var average = weight ? luminance / weight : 0;
+          finish(average > 0.52 ? 'light' : 'dark');
+        } catch (e) {
+          // Bila browser menolak pembacaan piksel, pilih teks putih yang
+          // biasanya paling aman pada wallpaper foto berwarna.
+          finish('dark');
+        }
+      };
+      image.onerror = function () { finish('dark'); };
+      image.src = url;
+    });
+  }
+  function joWallSyncFrame(frame) {
+    if (!frame || !frame.contentWindow) return;
+    frame.contentWindow.postMessage({
+      type: 'jo-wallpaper',
+      enabled: !!document.getElementById('joWallpaperToggle') && document.getElementById('joWallpaperToggle').checked,
+      image: joWallCustomUrl || joAssetUrl('./assets/wallpaper-default.jpg'),
+      theme: joWallTheme
+    }, '*');
+  }
+  function joWallSyncFrames() {
+    Object.keys(joFrames).forEach(function (key) { joWallSyncFrame(joFrames[key]); });
+  }
+  function joWallApply(enabled) {
+    var wall = document.getElementById('joWallpaper');
+    var toggle = document.getElementById('joWallpaperToggle');
+    var state = document.getElementById('joWallState');
+    if (!wall || !toggle) return;
+    toggle.checked = !!enabled;
+    wall.classList.toggle('on', !!enabled);
+    if (state) state.textContent = enabled ? 'ON' : 'OFF';
+    joWallWrite(JO_WALL_ENABLED, enabled ? '1' : '0');
+    joWallSetTheme(joWallTheme);
+  }
+  function joWallClosePanel() {
+    var panel = document.getElementById('joWallPanel');
+    var trigger = document.querySelector('.jo-wall-trigger');
+    if (panel) panel.setAttribute('hidden', '');
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  }
+  function joWallCloseLanguageMenus() {
+    document.querySelectorAll('.jo-lang.open').forEach(function (b) { b.classList.remove('open'); });
+  }
+  function joWallSet(enabled) {
+    joWallCloseLanguageMenus();
+    joWallApply(enabled);
+  }
+  function joWallTogglePanel() {
+    var panel = document.getElementById('joWallPanel');
+    var trigger = document.querySelector('.jo-wall-trigger');
+    if (!panel) return;
+    var open = panel.hasAttribute('hidden');
+    joWallCloseLanguageMenus();
+    if (open) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
+    if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  function joWallSetImage(url, custom) {
+    var wall = document.getElementById('joWallpaper');
+    if (!wall || !url) return;
+    wall.style.backgroundImage = "linear-gradient(rgba(15,23,42,.12), rgba(15,23,42,.12)), url('" + url.replace(/'/g, "%27") + "')";
+    joWallCustomUrl = custom ? url : '';
+    var clear = document.getElementById('joWallClear');
+    if (clear) clear.hidden = !custom;
+    var request = ++joWallThemeRequest;
+    joWallDetectTheme(url).then(function (theme) {
+      if (request === joWallThemeRequest) joWallSetTheme(theme);
+    });
+    joWallSyncFrames();
+  }
+  function joWallChoose(input) {
+    var file = input && input.files && input.files[0];
+    if (!file || !file.type.match(/^image\//)) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var url = String(reader.result || '');
+      joWallSetImage(url, true);
+      joWallWrite(JO_WALL_CUSTOM, url);
+      joWallApply(true);
+    };
+    reader.readAsDataURL(file);
+  }
+  function joWallUseDefault() {
+    joWallSetImage(joAssetUrl('./assets/wallpaper-default.jpg'), false);
+    joWallWrite(JO_WALL_CUSTOM, '');
+    joWallApply(true);
+  }
+  function joWallClearCustom() {
+    joWallSetImage(joAssetUrl('./assets/wallpaper-default.jpg'), false);
+    joWallWrite(JO_WALL_CUSTOM, '');
+    var input = document.getElementById('joWallpaperFile');
+    if (input) input.value = '';
+  }
+  (function joInitWallpaper() {
+    joWallPaint();
+    var custom = joWallRead(JO_WALL_CUSTOM);
+    joWallSetImage(custom || joAssetUrl('./assets/wallpaper-default.jpg'), !!custom);
+    joWallApply(joWallRead(JO_WALL_ENABLED) === '1');
+  })();
+
   window.addEventListener('message', function (e) {
     if (e.data && e.data.jo === 'ready') {
       document.getElementById('joLoading').classList.remove('show');
@@ -2410,6 +2757,7 @@
       <button onclick="joTutGo('t3')">QP-006-02 (c)</button>
       <button onclick="joTutGo('t4')">QP-006-05 (b)</button>
       <button onclick="joTutGo('t4b')">QP-006-06 (a)</button>
+      <button onclick="joTutGo('t4c')">Pengecoran 3-in-1</button>
       <button onclick="joTutGo('t5')">Anotasi Foto</button>
       <button onclick="joTutGo('t7')">Gantt Generator</button>
       <button onclick="joTutGo('t8')">Menyimpan</button>
@@ -2428,19 +2776,19 @@
         </p>
 
         <div class="tut-shot">
-<svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg" role="img"
+<svg viewBox="0 0 900 430" xmlns="http://www.w3.org/2000/svg" role="img"
      aria-label="Ilustrasi halaman pilih form dan alat bantu">
-  <rect width="900" height="300" fill="#eeeae3"/>
+  <rect width="900" height="430" fill="#eeeae3"/>
   <g stroke="rgba(120,110,90,0.13)" stroke-width="1">
-    <path d="M0 0V300M60 0V300M120 0V300M180 0V300M240 0V300M300 0V300M360 0V300M420 0V300M480 0V300M540 0V300M600 0V300M660 0V300M720 0V300M780 0V300M840 0V300"/>
-    <path d="M0 0H900M0 60H900M0 120H900M0 180H900M0 240H900"/>
+    <path d="M0 0V430M60 0V430M120 0V430M180 0V430M240 0V430M300 0V430M360 0V430M420 0V430M480 0V430M540 0V430M600 0V430M660 0V430M720 0V430M780 0V430M840 0V430"/>
+    <path d="M0 0H900M0 60H900M0 120H900M0 180H900M0 240H900M0 300H900M0 360H900M0 420H900"/>
   </g>
   <rect x="378" y="20" width="144" height="15" rx="3" fill="#1e3a5f"/>
   <text x="450" y="32" font-family="Segoe UI,Arial" font-size="10.5" fill="#fff" text-anchor="middle" font-weight="bold">PT. JAYA OBAYASHI</text>
   <text x="450" y="53" font-family="Segoe UI,Arial" font-size="15" fill="#0f172a" text-anchor="middle" font-weight="bold">QC Form Generator</text>
   <text x="450" y="69" font-family="Segoe UI,Arial" font-size="10" fill="#64748b" text-anchor="middle">Pilih modul yang mau dikerjakan</text>
 
-  <g>
+  <g transform="translate(86 0)">
     <rect x="28" y="88" width="160" height="132" rx="7" fill="#fff" stroke="#e2e8f0"/>
     <rect x="28" y="88" width="160" height="4" rx="2" fill="#b91c1c"/>
     <rect x="40" y="102" width="96" height="13" rx="6" fill="#fee2e2"/>
@@ -2452,7 +2800,7 @@
     <rect x="40" y="176" width="122" height="4" rx="2" fill="#eef2f7"/>
     <text x="40" y="204" font-family="Segoe UI,Arial" font-size="9" fill="#b91c1c" font-weight="bold">Buka modul ini →</text>
   </g>
-  <g>
+  <g transform="translate(86 0)">
     <rect x="200" y="88" width="160" height="132" rx="7" fill="#fff" stroke="#e2e8f0"/>
     <rect x="200" y="88" width="160" height="4" rx="2" fill="#2563eb"/>
     <rect x="212" y="102" width="96" height="13" rx="6" fill="#dbeafe"/>
@@ -2464,7 +2812,7 @@
     <rect x="212" y="176" width="124" height="4" rx="2" fill="#eef2f7"/>
     <text x="212" y="204" font-family="Segoe UI,Arial" font-size="9" fill="#2563eb" font-weight="bold">Buka modul ini →</text>
   </g>
-  <g>
+  <g transform="translate(86 0)">
     <rect x="372" y="88" width="160" height="132" rx="7" fill="#fff" stroke="#e2e8f0"/>
     <rect x="372" y="88" width="160" height="4" rx="2" fill="#047857"/>
     <rect x="384" y="102" width="96" height="13" rx="6" fill="#d1fae5"/>
@@ -2477,7 +2825,7 @@
     <text x="384" y="204" font-family="Segoe UI,Arial" font-size="9" fill="#047857" font-weight="bold">Buka modul ini →</text>
   </g>
   <g>
-    <g transform="translate(-172 0)">
+    <g transform="translate(-86 0)">
       <rect x="716" y="88" width="160" height="132" rx="7" fill="#fff" stroke="#e2e8f0"/>
       <rect x="716" y="88" width="160" height="4" rx="2" fill="#7c3aed"/>
       <rect x="728" y="102" width="70" height="13" rx="6" fill="#ede9fe"/>
@@ -2491,10 +2839,35 @@
     </g>
   </g>
 
-  <rect x="150" y="240" width="600" height="34" rx="5" fill="#fffbeb" stroke="#fde68a"/>
-  <rect x="150" y="240" width="4" height="34" fill="#eab308"/>
-  <text x="166" y="255" font-family="Segoe UI,Arial" font-size="9.5" fill="#854d0e" font-weight="bold">Keenam modul berjalan terpisah sepenuhnya.</text>
-  <text x="166" y="268" font-family="Segoe UI,Arial" font-size="9.5" fill="#854d0e">Pindah modul tidak menghapus pekerjaan yang sedang berjalan.</text>
+  <g transform="translate(86 0)">
+    <rect x="200" y="232" width="160" height="132" rx="7" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="200" y="232" width="160" height="4" rx="2" fill="#0f766e"/>
+    <rect x="212" y="246" width="108" height="13" rx="6" fill="#ccfbf1"/>
+    <text x="266" y="256" font-family="Segoe UI,Arial" font-size="7.5" fill="#0f766e" text-anchor="middle" font-weight="bold">QP-006-06 (a)</text>
+    <text x="212" y="277" font-family="Segoe UI,Arial" font-size="10.5" fill="#0f172a" font-weight="bold">Rebar Material</text>
+    <text x="212" y="290" font-family="Segoe UI,Arial" font-size="10.5" fill="#0f172a" font-weight="bold">Delivery</text>
+    <rect x="212" y="300" width="130" height="4" rx="2" fill="#eef2f7"/>
+    <rect x="212" y="310" width="112" height="4" rx="2" fill="#eef2f7"/>
+    <rect x="212" y="320" width="124" height="4" rx="2" fill="#eef2f7"/>
+    <text x="212" y="348" font-family="Segoe UI,Arial" font-size="9" fill="#0f766e" font-weight="bold">Buka modul ini &#8594;</text>
+  </g>
+  <g transform="translate(86 0)">
+    <rect x="372" y="232" width="160" height="132" rx="7" fill="#fff" stroke="#e2e8f0"/>
+    <rect x="372" y="232" width="160" height="4" rx="2" fill="#0891b2"/>
+    <rect x="384" y="246" width="128" height="13" rx="6" fill="#cffafe"/>
+    <text x="448" y="256" font-family="Segoe UI,Arial" font-size="7.1" fill="#0e7490" text-anchor="middle" font-weight="bold">QP-006-08 (a), 006-06 (c), 006-08 (d)</text>
+    <text x="384" y="277" font-family="Segoe UI,Arial" font-size="10.5" fill="#0f172a" font-weight="bold">Pengecoran</text>
+    <text x="384" y="290" font-family="Segoe UI,Arial" font-size="10.5" fill="#0f172a" font-weight="bold">3-in-1</text>
+    <rect x="384" y="300" width="130" height="4" rx="2" fill="#eef2f7"/>
+    <rect x="384" y="310" width="112" height="4" rx="2" fill="#eef2f7"/>
+    <rect x="384" y="320" width="124" height="4" rx="2" fill="#eef2f7"/>
+    <text x="384" y="348" font-family="Segoe UI,Arial" font-size="9" fill="#0891b2" font-weight="bold">Buka modul ini &#8594;</text>
+  </g>
+
+  <rect x="150" y="380" width="600" height="34" rx="5" fill="#fffbeb" stroke="#fde68a"/>
+  <rect x="150" y="380" width="4" height="34" fill="#eab308"/>
+  <text x="166" y="395" font-family="Segoe UI,Arial" font-size="9.5" fill="#854d0e" font-weight="bold">Keenam modul berjalan terpisah sepenuhnya.</text>
+  <text x="166" y="408" font-family="Segoe UI,Arial" font-size="9.5" fill="#854d0e">Pindah modul tidak menghapus pekerjaan yang sedang berjalan.</text>
 </svg>
 </div>
         <div class="tut-cap">Halaman pertama yang muncul &mdash; pilih modul yang mau dikerjakan.</div>
@@ -2830,11 +3203,41 @@
         </div>
       </div>
 
+      <!-- ============ 4c ============ -->
+      <div class="tut-ch" id="t4c" style="--w:#0891b2">
+        <h3 style="border-left-color:#0891b2">Pengecoran 3-in-1 &mdash; tiga form dalam satu berkas</h3>
+        <p>
+          Paket ini menggabungkan <b>QP-006-08 (a)</b> untuk pemeriksaan sebelum cor,
+          <b>QP-006-06 (c)</b> untuk checklist inspeksi besi, dan
+          <b>QP-006-08 (d)</b> untuk laporan kerja pengecoran.
+          Ketiganya berjalan sebagai satu modul dan bisa menghasilkan tiga file Excel.
+        </p>
+
+        <table class="tut-tbl">
+          <tr><th style="width:210px">Halaman</th><th>Yang diisi</th></tr>
+          <tr><td><b>1 &middot; Sebelum Cor</b></td><td>Data proyek, inspector, tanggal, volume dan mutu beton, lalu checklist pemeriksaan sebelum pengecoran.</td></tr>
+          <tr><td><b>2 &middot; Inspeksi Besi</b></td><td>Pilih tipe struktur, lengkapi checklist dan catatan, kemudian beri anotasi pada gambar bila diperlukan.</td></tr>
+          <tr><td><b>3 &middot; Laporan Cor</b></td><td>Isi detail pelaksanaan pengecoran, data pompa/pekerja, hasil pemeriksaan, dan tanda tangan.</td></tr>
+        </table>
+
+        <ol>
+          <li>Isi kotak kuning pada setiap halaman. Data yang bertanda <b>*</b> wajib dilengkapi.</li>
+          <li>Pakai navigasi di bar atas untuk berpindah antar tiga form tanpa kembali ke halaman awal.</li>
+          <li>Gunakan area gambar, Key Plan, grafik, dan tanda tangan untuk menggambar atau memasukkan gambar.</li>
+          <li>Simpan <b>Draft</b> bila pekerjaan belum selesai, atau tekan <b>Generate Excel (3 file)</b> untuk mengunduh seluruh keluaran.</li>
+        </ol>
+
+        <div class="tut-tip">
+          Urutan halaman mengikuti alur pekerjaan lapangan: <b>sebelum cor &rarr; inspeksi besi &rarr; laporan cor</b>.
+          Perpindahan halaman tidak menghapus isian yang sudah dibuat; perubahan tersimpan otomatis di browser.
+        </div>
+      </div>
+
       <!-- ============ 5 ============ -->
       <div class="tut-ch red" id="t5">
         <h3>Anotasi foto &mdash; menandai bagian yang ditunjuk</h3>
         <p>
-          Tersedia di ketiga form QC. Klik tombol anotasi pada foto yang sudah dimasukkan,
+          Tersedia di kelima form QC. Klik tombol anotasi pada foto yang sudah dimasukkan,
           lalu tandai bagian yang ingin ditunjukkan. Hasil tandanya menyatu ke foto
           dan ikut terbawa ke Excel.
         </p>

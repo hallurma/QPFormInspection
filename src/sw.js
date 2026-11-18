@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jkt09-pwa-v2';
+const CACHE_NAME = 'jkt09-pwa-v13';
 const APP_SHELL = new URL('./', self.registration.scope).href;
 const PRECACHE_URLS = [
   './',
@@ -7,6 +7,7 @@ const PRECACHE_URLS = [
   './assets/pwa-icon-192.png',
   './assets/pwa-icon-512.png',
   './assets/jo-logo.png',
+  './assets/wallpaper-default.jpg',
   './assets/stamp-obayashi.png',
   './assets/stamp-jaya-obayashi.png',
   './forms/b.html',
