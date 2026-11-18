@@ -486,6 +486,14 @@
       right: max(24px, calc(env(safe-area-inset-right) + 16px));
     }
   }
+  /* Tablet/iPad: keep the wallpaper controls below the system safe area.
+     Phones retain the compact placement defined in the max-width:700px rule. */
+  @media (min-width: 701px) and (max-width: 1300px) {
+    .jo-wall-control { top: max(56px, calc(env(safe-area-inset-top) + 8px)); }
+  }
+  @media (min-width: 701px) and (max-width: 1300px) and (pointer: coarse) {
+    .jo-wall-control { top: max(76px, calc(env(safe-area-inset-top) + 32px)); }
+  }
 </style>
 </head>
 <body>

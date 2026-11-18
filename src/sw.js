@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jkt09-pwa-v13';
+const CACHE_NAME = 'jkt09-pwa-v14';
 const APP_SHELL = new URL('./', self.registration.scope).href;
 const PRECACHE_URLS = [
   './',
